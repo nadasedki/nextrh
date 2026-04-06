@@ -1,0 +1,3 @@
+nextrh-backend/.env
+nextrh-backend/temp/*
+nextrh-backend/tmp/*
