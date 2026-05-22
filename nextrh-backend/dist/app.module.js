@@ -26,6 +26,9 @@ const experience_module_1 = require("./experience/experience.module");
 const rag_module_1 = require("./rag/rag.module");
 const google_calendar_service_1 = require("./google-calendar/google-calendar.service");
 const google_calendar_controller_1 = require("./google-calendar/google-calendar.controller");
+const google_calendar_module_1 = require("./google-calendar/google-calendar.module");
+const cv_generator_module_1 = require("./cv-generator/cv-generator.module");
+const cv_generate_module_1 = require("./cv-generate/cv-generate.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -54,7 +57,10 @@ exports.AppModule = AppModule = __decorate([
             parser_module_1.ParserModule,
             cv_parsing_module_1.CvParsingModule,
             experience_module_1.ExperienceModule,
-            rag_module_1.RagModule
+            rag_module_1.RagModule,
+            google_calendar_module_1.GoogleCalendarModule,
+            cv_generator_module_1.CvGeneratorModule,
+            cv_generate_module_1.CvGenerateModule,
         ],
         controllers: [parser_controller_1.ParserController, google_calendar_controller_1.GoogleCalendarController],
         providers: [parser_service_1.ParserService, google_calendar_service_1.GoogleCalendarService],

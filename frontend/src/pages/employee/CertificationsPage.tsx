@@ -40,7 +40,15 @@ const CertificationsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
+// States for Manual Form
+  const [isManualSubmitting, setIsManualSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    provider: '',
+    issueDate: '',
+    expiryDate: '',
+  });
+  //end of states for manual form
   // Fetch certifications from backend
   useEffect(() => {
     if (!token || !user) return;
@@ -148,6 +156,58 @@ const handleUploadFile = async () => {
     setIsUploading(false);
   }
 };
+const handleManualChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleManualSubmit = async () => {
+    if (!formData.name || !formData.provider) {
+        alert("Please fill in at least the name and provider.");
+        return;
+    }
+
+    setIsManualSubmitting(true);
+    try {
+      const res = await fetch(`http://localhost:3000/certifications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+       
+body: JSON.stringify({
+    name: formData.name,        
+    issuer: formData.provider,  
+    issueDate: formData.issueDate,
+    expirationDate: formData.expiryDate,
+}),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.message || 'Failed to add certification');
+
+      // Add the new cert to the list
+      const certData = result.data || result;
+      
+const newCert: Certification = {
+  id: certData.certId || certData.id,
+  userId: certData.userId,
+  name: certData.name || certData.certName,     
+  provider: certData.issuer || certData.provider, 
+  issueDate: certData.issueDate,
+  expiryDate: certData.expiryDate,
+  status: certData.status || 'active',
+};
+
+      setCertifications((prev) => [newCert, ...prev]);
+      setIsAddDialogOpen(false);
+      setFormData({ name: '', provider: '', issueDate: '', expiryDate: '' });
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    } finally {
+      setIsManualSubmitting(false);
+    }
+  };
 
   const CertificationCard: React.FC<{ cert: Certification }> = ({ cert }) => (
     <Card className="group hover:shadow-md transition-all duration-200 animate-fade-in">
@@ -266,7 +326,42 @@ const handleUploadFile = async () => {
                 />
               </div>
             </div>
+{/* --- SEPARATOR --- */}
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or manual entry</span>
+              </div>
+            </div>
 
+            {/* --- MANUAL FORM --- */}
+            <div className="grid gap-4 py-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Certification Name</label>
+                  <Input name="name" placeholder="e.g. AWS Solutions Architect" value={formData.name} onChange={handleManualChange} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Provider</label>
+                  <Input name="provider" placeholder="e.g. Amazon" value={formData.provider} onChange={handleManualChange} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Issue Date</label>
+                  <Input name="issueDate" type="date" value={formData.issueDate} onChange={handleManualChange} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Expiry Date</label>
+                  <Input name="expiryDate" type="date" value={formData.expiryDate} onChange={handleManualChange} />
+                </div>
+              </div>
+              <Button variant="secondary" className="w-full" onClick={handleManualSubmit} disabled={isManualSubmitting || isUploading}>
+                {isManualSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                Add Manually
+              </Button>
+            </div>
+           { /*---added manual---*/}
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isUploading}>
                 Cancel

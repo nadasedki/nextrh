@@ -13,11 +13,13 @@ const rag_controller_1 = require("./rag.controller");
 const embedding_service_1 = require("./embedding.service");
 const vector_service_1 = require("./vector.service");
 const cv_service_1 = require("./cv.service");
+const evaluation_module_1 = require("../modules/evaluation/evaluation.module");
 let RagModule = class RagModule {
 };
 exports.RagModule = RagModule;
 exports.RagModule = RagModule = __decorate([
     (0, common_1.Module)({
+        imports: [evaluation_module_1.EvaluationModule],
         providers: [rag_service_1.RagService, embedding_service_1.EmbeddingService, vector_service_1.VectorService, cv_service_1.CvService],
         controllers: [rag_controller_1.RagController],
     })

@@ -20,74 +20,46 @@ let CvService = class CvService {
     constructor(dataSource) {
         this.dataSource = dataSource;
     }
-    async getAllCVs() {
+    async getAllUnifiedProfiles() {
         try {
-            const cvs = await this.dataSource.query('SELECT * FROM cvs');
-            for (const cv of cvs) {
+            const profiles = await this.dataSource.query(`
+        SELECT 
+          c.cv_id,
+          c.user_id,
+          u.full_name,
+          u.title AS profession,
+          u.summary,
+          u.years_of_experience,
+          u.department
+        FROM public.cvs c
+        INNER JOIN public.users u ON c.user_id = u.user_id
+      `);
+            for (const profile of profiles) {
                 const [certs, edus, projs, exps] = await Promise.all([
-                    this.dataSource.query('SELECT * FROM certifications WHERE "cvCvId"=$1', [cv.cv_id]),
-                    this.dataSource.query('SELECT * FROM education WHERE "cvCvId"=$1', [cv.cv_id]),
-                    this.dataSource.query('SELECT * FROM projects WHERE "cvCvId"=$1', [cv.cv_id]),
-                    this.dataSource.query('SELECT * FROM experiences WHERE "cvCvId"=$1', [cv.cv_id]),
+                    this.dataSource.query('SELECT * FROM public.certifications WHERE user_id = $1', [profile.user_id]),
+                    this.dataSource.query('SELECT * FROM public.education WHERE "cvCvId" = $1', [profile.cv_id]),
+                    this.dataSource.query('SELECT * FROM public.projects WHERE user_id = $1', [profile.user_id]),
+                    this.dataSource.query('SELECT * FROM public.experiences WHERE user_id = $1', [profile.user_id]),
                 ]);
-                cv.certifications = certs;
-                cv.education = edus;
-                cv.projects = projs;
-                cv.experiences = exps;
-                cv.fullText = this.buildText(cv);
+                profile.certifications = certs;
+                profile.education = edus;
+                profile.projects = projs;
+                profile.experiences = exps;
             }
-            return cvs;
+            return profiles;
         }
         catch (err) {
-            console.error('Erreur SQL:', err.message);
+            console.error('Erreur SQL extraction profils:', err.message);
             return [];
         }
-    }
-    buildText(cv) {
-        if (!cv)
-            return '';
-        const certs = new Set(cv.certifications?.map(c => `- ${c.cert_name} (${c.provider})`));
-        const edus = new Set(cv.education?.map(e => `- ${e.degree} en ${e.field_of_study} à ${e.institution}`));
-        const projs = new Set(cv.projects?.map(p => `- ${p.name}: ${p.description}`));
-        const exps = new Set(cv.experiences?.map(exp => `- ${exp.role} chez ${exp.company}: ${exp.description}`));
-        let text = `IDENTITÉ: ${cv.full_name}\nPROFESSION: ${cv.profession || 'N/A'}\n`;
-        text += `RÉSUMÉ: ${cv.summary || ''}\n\n`;
-        if (certs.size > 0)
-            text += `CERTIFICATIONS:\n${Array.from(certs).join('\n')}\n\n`;
-        if (edus.size > 0)
-            text += `ÉDUCATION:\n${Array.from(edus).join('\n')}\n\n`;
-        if (projs.size > 0)
-            text += `PROJETS:\n${Array.from(projs).join('\n')}\n\n`;
-        if (exps.size > 0)
-            text += `EXPÉRIENCES:\n${Array.from(exps).join('\n')}\n\n`;
-        return text.trim();
-    }
-    chunkText(text, chunkSize = 800) {
-        if (!text)
-            return [];
-        const paragraphs = text.split('\n\n');
-        const chunks = [];
-        let currentChunk = "";
-        for (const para of paragraphs) {
-            if ((currentChunk.length + para.length) > chunkSize && currentChunk.length > 0) {
-                chunks.push(currentChunk.trim());
-                currentChunk = para;
-            }
-            else {
-                currentChunk += "\n\n" + para;
-            }
-        }
-        if (currentChunk)
-            chunks.push(currentChunk.trim());
-        return chunks;
     }
     async getAllNames() {
         try {
-            const result = await this.dataSource.query('SELECT DISTINCT full_name FROM cvs WHERE full_name IS NOT NULL');
+            const result = await this.dataSource.query('SELECT DISTINCT full_name FROM public.users WHERE full_name IS NOT NULL');
             return result.map(r => r.full_name);
         }
         catch (err) {
-            console.error('Erreur lors de la récupération des noms:', err.message);
+            console.error('Erreur SQL lors de la récupération des noms:', err.message);
             return [];
         }
     }

@@ -26,7 +26,7 @@ export class GoogleCalendarService {
     const inOneHour = new Date(now.getTime() + 3600000);
 
     const event = {
-      summary: '🚀 Test PFE : Alerte Expiration CV',
+      summary: 'Test  : Alerte Expiration ',
       description: 'Ceci est un test automatique envoyé depuis le backend NestJS.',
       start: {
         dateTime: now.toISOString(),
@@ -51,14 +51,14 @@ export class GoogleCalendarService {
         requestBody: event,
       });
 
-      console.log('✅ Événement créé :', res.data.htmlLink);
+      console.log(' Événement créé :', res.data.htmlLink);
       return { 
         success: true, 
         link: res.data.htmlLink,
         message: 'L\'événement a été ajouté à votre Google Agenda.' 
       };
     } catch (error) {
-      console.error('❌ Erreur Google Calendar:', error.response?.data || error.message);
+      console.error('Erreur Google Calendar:', error.response?.data || error.message);
       throw new InternalServerErrorException('Impossible de créer l\'événement Google');
     }
   }
@@ -107,4 +107,119 @@ export class GoogleCalendarService {
     throw error;
   }
 }
+
+//real code 
+// src/google-calendar/google-calendar.service.ts
+
+/*async scheduleEmployeeReminder(
+  employeeName: string,
+  employeeEmail: string,
+  certName: string,
+  expiryDateStr: string,
+) {
+  const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
+
+  // 1. Calcul de la DATE D'ALERTE (Date d'expiration - 60 jours)
+  const expiryDate = new Date(expiryDateStr);
+  const alertDate = new Date(expiryDate);
+  alertDate.setDate(alertDate.getDate() - 60);
+
+  // Vérification : si l'alerte est déjà passée, on la met à "maintenant"
+  const now = new Date();
+  if (alertDate < now) {
+    alertDate.setTime(now.getTime() + 1 * 60000); // Dans 10 minutes
+  } else {
+    alertDate.setHours(9, 0, 0); // À 09h00 du matin le jour J-60
+  }
+
+  // 2. Création de l'événement DIRECTEMENT à la date d'alerte
+  const event = {
+    // Le titre qui apparaîtra dans l'agenda le jour de l'envoi
+    summary: `✉️ ALERTE ENVOYÉE : Expiration ${certName} (${employeeName})`,
+    description: `
+      Cet événement confirme qu'un email de rappel a été envoyé à l'employé.
+      ---
+      Employé : ${employeeName}
+      Email : ${employeeEmail}
+      Certification : ${certName}
+      Date d'expiration finale : ${expiryDate.toLocaleDateString()}
+    `,
+    start: {
+      dateTime: alertDate.toISOString(),
+      timeZone: 'Africa/Tunis',
+    },
+    end: {
+      dateTime: new Date(alertDate.getTime() + 3600000).toISOString(), // Durée 1h
+      timeZone: 'Africa/Tunis',
+    },
+    // On ajoute l'employé en invité pour que Google lui envoie le mail
+    attendees: [
+      { email: employeeEmail }
+    ],
+    reminders: {
+      useDefault: false,
+      overrides: [
+        { method: 'email', minutes: 0 }, // Envoi du mail à l'employé à l'instant T
+        { method: 'popup', minutes: 10 }, // Notification pour le Team Leader
+      ],
+    },
+  };
+
+  try {
+    const res = await calendar.events.insert({
+      calendarId: 'primary', // Agenda du Team Leader
+      requestBody: event,
+      sendUpdates: 'all', // Déclenche l'envoi immédiat de l'invitation (l'email)
+    });
+    console.log(` Alerte créée dans l'agenda du TL pour le : ${alertDate.toISOString()}`);
+    return res.data.htmlLink;
+  } catch (error) {
+    console.error('Erreur API Google Calendar:', error.message);
+    return null;
+  }
+}*/
+
+async scheduleEmployeeReminder(
+  employeeName: string,
+  employeeEmail: string,
+  certName: string,
+  expiryDateStr: string,
+) {
+  const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
+
+  // 1. Calcul de la DATE D'ALERTE (Date d'expiration - 60 jours)
+  const expiryDate = new Date(expiryDateStr);
+  const alertDate = new Date(expiryDate);
+  alertDate.setDate(alertDate.getDate() - 60);
+
+  // Vérification : si l'alerte est déjà passée, on la met à "maintenant"
+  const now = new Date();
+  if (alertDate < now) {
+    alertDate.setTime(now.getTime() + 1 * 60000); // Dans 10 minutes
+  } else {
+    alertDate.setHours(9, 0, 0); // À 09h00 du matin le jour J-60
+  }
+
+  // 2. Création de l'événement DIRECTEMENT à la date d'alerte
+   const event = {
+    // 1. On ajoute [A_ENVOYER] pour que n8n le reconnaisse
+    summary: `[A_ENVOYER] Expiration ${certName} : ${employeeName}`,
+    
+    // 2. On met l'email de l'employé dans la "Description" 
+    // pour que n8n puisse le lire facilement
+    description: `EMAIL_EMPLOYE:${employeeEmail}
+                  NOM_EMPLOYE:${employeeName}
+                  CERTIFICAT:${certName},
+                  DATE_EXPIRATION:${expiryDateStr}`,
+    
+    start: { dateTime: alertDate.toISOString(), timeZone: 'Africa/Tunis' },
+    end: { dateTime: new Date(alertDate.getTime() + 3600000).toISOString(), timeZone: 'Africa/Tunis' },
+    
+    // On ne met PAS d'invité (attendees) ici, car c'est n8n qui enverra le mail personnalisé
+    reminders: { useDefault: true }, 
+  };
+  
+  return await calendar.events.insert({ calendarId: 'primary', requestBody: event });
+}
+
 }

@@ -18,11 +18,13 @@ const axios_1 = __importDefault(require("axios"));
 const embedding_service_1 = require("./embedding.service");
 const vector_service_1 = require("./vector.service");
 const cv_service_1 = require("./cv.service");
+const evaluation_service_1 = require("../modules/evaluation/evaluation.service");
 let RagService = class RagService {
-    constructor(cvService, embeddingService, vectorService) {
+    constructor(cvService, embeddingService, vectorService, evaluationService) {
         this.cvService = cvService;
         this.embeddingService = embeddingService;
         this.vectorService = vectorService;
+        this.evaluationService = evaluationService;
     }
     async onModuleInit() {
         await this.ensureCollectionExists();
@@ -42,26 +44,64 @@ let RagService = class RagService {
         }
     }
     async indexAllCVs() {
-        const cvs = await this.cvService.getAllCVs();
-        console.log(`🚀 Début de l'indexation enrichie de ${cvs.length} CVs...`);
+        const profiles = await this.cvService.getAllUnifiedProfiles();
+        console.log(`Début de l'indexation atomique de ${profiles.length} profils candidats...`);
         let totalChunks = 0;
-        for (const cv of cvs) {
-            if (!cv.fullText)
-                continue;
-            const chunks = this.cvService.chunkText(cv.fullText, 1000);
-            for (const chunk of chunks) {
-                const enrichedText = `CANDIDAT: ${cv.full_name} | CONTENU: ${chunk}`;
-                const vector = await this.embeddingService.embed(enrichedText);
+        for (const profile of profiles) {
+            const chunksToEmbed = [];
+            chunksToEmbed.push({
+                text: `CANDIDAT: ${profile.full_name} | PROFESSION: ${profile.profession || 'N/A'} | DÉPARTEMENT: ${profile.department || 'N/A'} | EXPÉRIENCE GLOBALE: ${profile.years_of_experience} ans `,
+                type: 'profile'
+            });
+            if (profile.certifications) {
+                for (const cert of profile.certifications) {
+                    const statusStr = cert.status ? ` (Statut: ${cert.status})` : '';
+                    chunksToEmbed.push({
+                        text: `CANDIDAT: ${profile.full_name} | CERTIFICATION: ${cert.cert_name} par ${cert.provider || 'Inconnu'}${statusStr}`,
+                        type: 'certification'
+                    });
+                }
+            }
+            if (profile.education) {
+                for (const edu of profile.education) {
+                    const dateStr = (edu.start_year && edu.end_year) ? ` de ${edu.start_year} à ${edu.end_year}` : '';
+                    chunksToEmbed.push({
+                        text: `CANDIDAT: ${profile.full_name} | DIPLÔME: ${edu.degree} en ${edu.field_of_study || 'Général'} à l'établissement ${edu.institution || 'Inconnu'}${dateStr}`,
+                        type: 'education'
+                    });
+                }
+            }
+            if (profile.projects) {
+                for (const proj of profile.projects) {
+                    const techStr = (proj.technologies && proj.technologies.length > 0) ? ` | TECHNOLOGIES UTILISÉES: ${proj.technologies.join(', ')}` : '';
+                    chunksToEmbed.push({
+                        text: `CANDIDAT: ${profile.full_name} | PROJET: ${proj.name} (Rôle: ${proj.role || 'Participant'}${proj.client ? ` pour ${proj.client}` : ''}). Description: ${proj.description || ''}${techStr}`,
+                        type: 'project'
+                    });
+                }
+            }
+            if (profile.experiences) {
+                for (const exp of profile.experiences) {
+                    chunksToEmbed.push({
+                        text: `CANDIDAT: ${profile.full_name} | EXPÉRIENCE: Poste de ${exp.role} chez ${exp.company}. Missions et Activités: ${exp.description || ''}`,
+                        type: 'experience'
+                    });
+                }
+            }
+            for (const item of chunksToEmbed) {
+                const vector = await this.embeddingService.embed(item.text);
                 if (vector.length > 0) {
                     await this.vectorService.insertVector(vector, {
-                        cv_id: cv.cv_id,
-                        full_name: cv.full_name,
-                        text: enrichedText,
+                        cv_id: profile.cv_id,
+                        user_id: profile.user_id,
+                        full_name: profile.full_name,
+                        text: item.text,
+                        type: item.type
                     });
                     totalChunks++;
                 }
             }
-            console.log(`✅ CV #${cv.cv_id} (${cv.full_name}) : ${chunks.length} chunks indexés.`);
+            console.log(`✓ Candidat ${profile.full_name}: ${chunksToEmbed.length} vecteurs insérés.`);
         }
         return totalChunks;
     }
@@ -70,56 +110,83 @@ let RagService = class RagService {
         const questionLower = question.toLowerCase();
         const targetCandidate = candidates.find(name => {
             const parts = name.toLowerCase().split(' ');
-            const firstName = parts[0];
-            const lastName = parts[parts.length - 1];
-            return questionLower.includes(name.toLowerCase()) ||
-                questionLower.includes(firstName) ||
-                questionLower.includes(lastName);
+            return questionLower.includes(name.toLowerCase()) || parts.some(part => part.length > 2 && questionLower.includes(part));
         });
-        if (targetCandidate) {
-            console.log(`🎯 Filtre Metadata appliqué pour : ${targetCandidate}`);
+        let targetType = undefined;
+        if (questionLower.includes('certif') || questionLower.includes('attestation') || questionLower.includes('crédential')) {
+            targetType = 'certification';
+        }
+        else if (questionLower.includes('expérien') || questionLower.includes('poste') || questionLower.includes('travail') || questionLower.includes('chez') || questionLower.includes('employ')) {
+            targetType = 'experience';
+        }
+        else if (questionLower.includes('étud') || questionLower.includes('école') || questionLower.includes('universit') || questionLower.includes('diplôm')) {
+            targetType = 'education';
+        }
+        else if (questionLower.includes('projet')) {
+            targetType = 'project';
         }
         const queryVector = await this.embeddingService.embed(question);
-        const results = await this.vectorService.search(queryVector, targetCandidate, 7);
-        const context = results
-            .map(r => `[EXTRAIT DU CV DE ${r.payload.full_name}]\n${r.payload.text}`)
-            .join('\n\n---\n\n');
-        if (!context)
-            return "Je n'ai trouvé aucune information pertinente dans les CV pour répondre à cette question.";
-        console.log("--- DEBUG CONTEXTE ENVOYÉ AU LLM ---");
-        console.log(context);
-        console.log("-------------------------------------");
-        const prompt = `
-### RÔLE
-Tu es un Expert en Recrutement RH. Ta mission est d'extraire des réponses précises à partir des extraits de CV fournis.
+        const rawResults = await this.vectorService.search(queryVector, targetCandidate, 6);
+        let results = rawResults;
+        if (!results || results.length === 0) {
+            return "No relevant information found in candidates profiles database.";
+        }
+        const scored = results.map(r => {
+            const text = r.payload.text.toLowerCase();
+            const payloadType = r.payload.type;
+            let score = 0;
+            const keywords = questionLower.split(" ");
+            for (const k of keywords) {
+                if (k.length > 2 && text.includes(k))
+                    score += 1.5;
+            }
+            if (targetType && payloadType === targetType) {
+                score += 8.0;
+            }
+            if (targetCandidate && text.includes(targetCandidate.toLowerCase())) {
+                score += 10.0;
+            }
+            return { ...r, score };
+        });
+        const topResults = scored
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 3);
+        const contextPrompt = topResults
+            .map((c, i) => `[FACT ${i + 1}] (Section Relatée: ${c.payload.type?.toUpperCase()})\n${c.payload.text}`)
+            .join('\n\n');
+        const prompt = `You are a precise HR assistant.
+RULES:
+- Answer the user query using ONLY the verified facts below.
+- If the facts do not contain the answer, explicitly state "Not found in CVs".
+- Do not guess or extrapolate.
 
-### CONTEXTE DES CV (Source de vérité)
-${context}
+VERIFIED FACTS:
+${contextPrompt}
 
-### QUESTION DE L'UTILISATEUR
+QUESTION:
 ${question}
 
-### RÈGLES DE RÉPONSE
-1. Utilise EXCLUSIVEMENT les informations du contexte ci-dessus.
-2. Si tu parles d'une personne, cite obligatoirement son NOM COMPLET.
-3. Si l'information n'est pas dans le contexte, dis simplement que tu ne sais pas.
-4. Réponds de manière structurée (puces si nécessaire).
-
-RÉPONSE :
-`;
+ANSWER:`;
         try {
             const response = await axios_1.default.post('http://localhost:11434/api/chat', {
                 model: 'qwen2.5:7b',
                 messages: [{ role: 'user', content: prompt }],
                 stream: false,
-                options: {
-                    temperature: 0.1,
-                }
+                options: { temperature: 0.0 },
             });
-            return response.data.message?.content || 'Erreur lors de la génération de la réponse.';
+            const answer = response.data.message?.content || "Error generating response";
+            this.evaluationService.log({
+                id: Date.now().toString(),
+                question,
+                contexts: topResults.map(r => r.payload.text),
+                answer,
+                ground_truth: null,
+                metadata: { model: 'qwen2.5:7b', databaseSchema: 'v16.4_aligned' },
+            });
+            return answer;
         }
         catch (error) {
-            return `Erreur de communication avec le moteur IA : ${error.message}`;
+            return `LLM error: ${error.message}`;
         }
     }
 };
@@ -128,6 +195,7 @@ exports.RagService = RagService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [cv_service_1.CvService,
         embedding_service_1.EmbeddingService,
-        vector_service_1.VectorService])
+        vector_service_1.VectorService,
+        evaluation_service_1.EvaluationService])
 ], RagService);
 //# sourceMappingURL=rag.service.js.map

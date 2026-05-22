@@ -37,10 +37,16 @@ console.log("RAW LLM OUTPUT:", raw);
 
 // Clean markdown if present
 const cleaned = raw.replace(/```json|```/g, '').trim();
+let parsedJson = JSON.parse(cleaned);
 
+//  SAFEGUARD: If the LLM wraps the result in an array, unwrap the first object instantly
+if (Array.isArray(parsedJson)) {
+  console.log("⚠️ [Pipeline Warning] Detected LLM array output wrappers. Auto-unwrapping payload...");
+  parsedJson = parsedJson[0];
+}
 try {
   console.error("llm clean output :", cleaned);
-  return JSON.parse(cleaned);
+  return parsedJson;
 } catch (err) {
   console.error("JSON PARSE ERROR:", err);
   return { error: "Invalid JSON from LLM", raw };

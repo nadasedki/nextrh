@@ -13,12 +13,14 @@ const certifications_service_1 = require("./certifications.service");
 const certifications_controller_1 = require("./certifications.controller");
 const certification_entity_1 = require("./entities/certification.entity");
 const parser_module_1 = require("../parser/parser.module");
+const user_entity_1 = require("../users/entities/user.entity");
+const google_calendar_module_1 = require("../google-calendar/google-calendar.module");
 let CertificationsModule = class CertificationsModule {
 };
 exports.CertificationsModule = CertificationsModule;
 exports.CertificationsModule = CertificationsModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([certification_entity_1.Certification]), parser_module_1.ParserModule],
+        imports: [typeorm_1.TypeOrmModule.forFeature([certification_entity_1.Certification, user_entity_1.User]), parser_module_1.ParserModule, google_calendar_module_1.GoogleCalendarModule],
         controllers: [certifications_controller_1.CertificationsController],
         providers: [certifications_service_1.CertificationsService],
         exports: [certifications_service_1.CertificationsService],

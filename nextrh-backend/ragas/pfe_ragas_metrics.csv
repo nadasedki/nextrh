@@ -1,0 +1,5 @@
+user_input,retrieved_contexts,response,faithfulness,answer_relevancy
+how has CCNP Security certificate ?,['CANDIDAT: Anouar ABDALLAH CERTIFICATIONS:\n- CCNP  Security (Cisco)\n- '],"- **Anouar ABDALLAH** possède la certification **CCNP Security (Cisco)**.
+
+D'après les informations fournies.",0.5,0.8258376093030523
+how has Barracuda Load Balancer ADC Certified Product Specialist  certificate ?,['CANDIDAT: Aya BEN JEMAA  \n\nCERTIFICATIONS:\n- Barracuda Load Balancer ADC Certified Product Specialist (Professional Issuer)'],The Barracuda Load Balancer ADC Certified Product Specialist certificate is listed under Aya BEN JEMAA's certifications. ,1.0,0.7875753247989447

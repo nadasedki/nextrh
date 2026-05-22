@@ -53,7 +53,7 @@ let ParserService = class ParserService {
             fs.mkdirSync(outputDir, { recursive: true });
         }
         const outputPattern = path.join(outputDir, 'page');
-        await execAsync(`pdftoppm -png "${pdfPath}" "${outputPattern}"`);
+        await execAsync(`pdftoppm -png  "${pdfPath}" "${outputPattern}"`);
         const files = fs.readdirSync(outputDir)
             .filter(f => f.endsWith('.png'))
             .map(f => path.join(outputDir, f));
@@ -71,8 +71,28 @@ let ParserService = class ParserService {
             const text = await this.extractTextFromImage(page);
             fullText += text + '\n';
         }
-        console.log('FINAL OCR TEXT:', fullText);
-        return fullText;
+        console.log(' OCR TEXT:', fullText);
+        const cleanedText = this.cleanText(fullText);
+        console.log('FINAL OCR TEXT:', cleanedText);
+        return cleanedText;
+    }
+    cleanText(text) {
+        if (!text)
+            return '';
+        return text
+            .replace(/[¥\\|;~`_\[\]{}()]/g, '')
+            .replace(/[—_-]{2,}/g, '')
+            .split('\n')
+            .map(line => {
+            let cleanedLine = line.trim();
+            cleanedLine = cleanedLine.replace(/\s+[a-zA-Z0-9]$/, '');
+            if (cleanedLine.length <= 2 && !/^(at|on|in|by|to|no|ok|is|of)$/i.test(cleanedLine)) {
+                return '';
+            }
+            return cleanedLine;
+        })
+            .filter(line => line.length > 0)
+            .join('\n');
     }
 };
 exports.ParserService = ParserService;

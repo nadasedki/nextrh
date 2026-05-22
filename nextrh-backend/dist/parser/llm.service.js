@@ -42,9 +42,14 @@ Text:
         const raw = response.data.message.content;
         console.log("RAW LLM OUTPUT:", raw);
         const cleaned = raw.replace(/```json|```/g, '').trim();
+        let parsedJson = JSON.parse(cleaned);
+        if (Array.isArray(parsedJson)) {
+            console.log("⚠️ [Pipeline Warning] Detected LLM array output wrappers. Auto-unwrapping payload...");
+            parsedJson = parsedJson[0];
+        }
         try {
             console.error("llm clean output :", cleaned);
-            return JSON.parse(cleaned);
+            return parsedJson;
         }
         catch (err) {
             console.error("JSON PARSE ERROR:", err);

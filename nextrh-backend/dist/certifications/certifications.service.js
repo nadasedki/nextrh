@@ -53,10 +53,14 @@ const certification_entity_1 = require("./entities/certification.entity");
 const ai_service_1 = require("../parser/ai.service");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
+const user_entity_1 = require("../users/entities/user.entity");
+const google_calendar_service_1 = require("../google-calendar/google-calendar.service");
 let CertificationsService = class CertificationsService {
-    constructor(certificationRepo, aiService) {
+    constructor(certificationRepo, aiService, userRepo, googleCalendarService) {
         this.certificationRepo = certificationRepo;
         this.aiService = aiService;
+        this.userRepo = userRepo;
+        this.googleCalendarService = googleCalendarService;
     }
     async findMyCertifications(employeeId) {
         const certs = await this.certificationRepo.find({
@@ -80,7 +84,11 @@ let CertificationsService = class CertificationsService {
             userId: employeeId,
             filePath: dto.filePath || null,
         });
-        return this.certificationRepo.save(certification);
+        const savedCert = await this.certificationRepo.save(certification);
+        if (savedCert.expiryDate) {
+            await this.syncToCalendar(employeeId, savedCert);
+        }
+        return savedCert;
     }
     async update(id, employeeId, dto) {
         if (Object.keys(dto).length === 0) {
@@ -142,7 +150,10 @@ let CertificationsService = class CertificationsService {
                 ...entityData,
                 userId: employeeId,
             });
-            return await this.certificationRepo.save(certification);
+            const savedCert = await this.certificationRepo.save(certification);
+            if (savedCert.expiryDate) {
+                await this.syncToCalendar(employeeId, savedCert);
+            }
         }
         catch (error) {
             console.error('Error saving certificate:', error.message);
@@ -224,12 +235,27 @@ let CertificationsService = class CertificationsService {
             return 'HP';
         return 'Professional Issuer';
     }
+    async syncToCalendar(userId, cert) {
+        try {
+            const user = await this.userRepo.findOne({ where: { user_id: userId } });
+            if (user && user.email && cert.expiryDate) {
+                await this.googleCalendarService.scheduleEmployeeReminder(user.full_name, user.email, cert.certName, cert.expiryDate.toISOString());
+                console.log(` Synchro Agenda réussie pour ${user.email}`);
+            }
+        }
+        catch (err) {
+            console.error(" Erreur de synchronisation Agenda:", err.message);
+        }
+    }
 };
 exports.CertificationsService = CertificationsService;
 exports.CertificationsService = CertificationsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(certification_entity_1.Certification)),
+    __param(2, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
-        ai_service_1.AiService])
+        ai_service_1.AiService,
+        typeorm_2.Repository,
+        google_calendar_service_1.GoogleCalendarService])
 ], CertificationsService);
 //# sourceMappingURL=certifications.service.js.map

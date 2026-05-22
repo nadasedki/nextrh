@@ -24,7 +24,7 @@ let GoogleCalendarService = class GoogleCalendarService {
         const now = new Date();
         const inOneHour = new Date(now.getTime() + 3600000);
         const event = {
-            summary: '🚀 Test PFE : Alerte Expiration CV',
+            summary: 'Test  : Alerte Expiration ',
             description: 'Ceci est un test automatique envoyé depuis le backend NestJS.',
             start: {
                 dateTime: now.toISOString(),
@@ -47,7 +47,7 @@ let GoogleCalendarService = class GoogleCalendarService {
                 calendarId: 'primary',
                 requestBody: event,
             });
-            console.log('✅ Événement créé :', res.data.htmlLink);
+            console.log(' Événement créé :', res.data.htmlLink);
             return {
                 success: true,
                 link: res.data.htmlLink,
@@ -55,7 +55,7 @@ let GoogleCalendarService = class GoogleCalendarService {
             };
         }
         catch (error) {
-            console.error('❌ Erreur Google Calendar:', error.response?.data || error.message);
+            console.error('Erreur Google Calendar:', error.response?.data || error.message);
             throw new common_1.InternalServerErrorException('Impossible de créer l\'événement Google');
         }
     }
@@ -96,6 +96,30 @@ let GoogleCalendarService = class GoogleCalendarService {
         catch (error) {
             throw error;
         }
+    }
+    async scheduleEmployeeReminder(employeeName, employeeEmail, certName, expiryDateStr) {
+        const calendar = googleapis_1.google.calendar({ version: 'v3', auth: this.oauth2Client });
+        const expiryDate = new Date(expiryDateStr);
+        const alertDate = new Date(expiryDate);
+        alertDate.setDate(alertDate.getDate() - 60);
+        const now = new Date();
+        if (alertDate < now) {
+            alertDate.setTime(now.getTime() + 1 * 60000);
+        }
+        else {
+            alertDate.setHours(9, 0, 0);
+        }
+        const event = {
+            summary: `[A_ENVOYER] Expiration ${certName} : ${employeeName}`,
+            description: `EMAIL_EMPLOYE:${employeeEmail}
+                  NOM_EMPLOYE:${employeeName}
+                  CERTIFICAT:${certName},
+                  DATE_EXPIRATION:${expiryDateStr}`,
+            start: { dateTime: alertDate.toISOString(), timeZone: 'Africa/Tunis' },
+            end: { dateTime: new Date(alertDate.getTime() + 3600000).toISOString(), timeZone: 'Africa/Tunis' },
+            reminders: { useDefault: true },
+        };
+        return await calendar.events.insert({ calendarId: 'primary', requestBody: event });
     }
 };
 exports.GoogleCalendarService = GoogleCalendarService;

@@ -16,6 +16,7 @@ export declare class Cv {
     phone: string;
     fax: string;
     address: string;
+    skills: string[];
     educations: Education[];
     projects: Project[];
     experiences: Experience[];

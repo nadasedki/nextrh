@@ -13,12 +13,17 @@ import { AiService } from 'src/parser/ai.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Cv } from 'src/cvs/entities/cv.entity';
+import { User } from 'src/users/entities/user.entity';
+import { GoogleCalendarService } from 'src/google-calendar/google-calendar.service';
 @Injectable()
 export class CertificationsService {
   constructor(
     @InjectRepository(Certification)
     private readonly certificationRepo: Repository<Certification>,
     private readonly aiService: AiService,
+     @InjectRepository(User) 
+    private readonly userRepo: Repository<User>, 
+  private readonly googleCalendarService: GoogleCalendarService, 
   ) {}
 
   async findMyCertifications(employeeId: number) {
@@ -50,7 +55,14 @@ export class CertificationsService {
 
     });
 
-    return this.certificationRepo.save(certification);
+     const savedCert = await this.certificationRepo.save(certification);
+
+  // --- AJOUT ICI ---
+  if (savedCert.expiryDate) {
+    await this.syncToCalendar(employeeId, savedCert);
+  }
+
+  return savedCert;
   }
 
   async update(id: number, employeeId: number, dto: UpdateCertificationDto) {
@@ -106,7 +118,7 @@ export class CertificationsService {
 ) {
   try {
     // -----------------------------
-    // 1️⃣ Create user folder
+    //  Create user folder
     // -----------------------------
     const userFolder = path.join(
       process.cwd(),
@@ -119,13 +131,13 @@ export class CertificationsService {
     }
 
     // -----------------------------
-    // 2️⃣ Save file
+    // Save file
     // -----------------------------
     const filePath = path.join(userFolder, file.originalname);
     fs.writeFileSync(filePath, file.buffer);
 
     // -----------------------------
-    // 3️⃣ Call AI Service
+    //  Call AI Service
     // -----------------------------
     const aiData = await this.aiService.extractCertificate(filePath);
     // Ensure we use the first object if LLM returned an array
@@ -137,19 +149,25 @@ export class CertificationsService {
     console.log('AI Data:', certificateObj);
 
     // -----------------------------
-    // 4️⃣ Map AI → DTO
+    //  Map AI → DTO
     // -----------------------------
     const entityData = this.mapAiToEntity(certificateObj, filePath);
 
     // -----------------------------
-    // 5️⃣ Save to Database
+    //  Save to Database
     // -----------------------------
     const certification = this.certificationRepo.create({
       ...entityData,
       userId: employeeId,
     });
 
-    return await this.certificationRepo.save(certification);
+    const savedCert = await this.certificationRepo.save(certification);
+
+    // --- AJOUT ICI ---
+    if (savedCert.expiryDate) {
+      await this.syncToCalendar(employeeId, savedCert);
+    }
+
 
   } catch (error) {
     console.error('Error saving certificate:', error.message);
@@ -160,7 +178,7 @@ private mapAiToEntity(aiData: any, filePath: string) {
   const status = this.calculateStatus(aiData.date_of_expiration);
 
   return {
-    certName: aiData.certificate_name,    // entity expects certName
+    certName: aiData.certificate_name,    
     provider: aiData.provider,
     issueDate: aiData.date_of_obtention ? new Date(aiData.date_of_obtention) : null,
     expiryDate: aiData.date_of_expiration ? new Date(aiData.date_of_expiration) : null,
@@ -245,6 +263,24 @@ private calculateStatus(expirationDate: string | null) {
     if (name.includes('hp')) return 'HP';
     return 'Professional Issuer';
   }
+private async syncToCalendar(userId: number, cert: Certification) {
+  try {
+    // 1. Récupérer les infos de l'employé (nom et email)
+    const user = await this.userRepo.findOne({ where: { user_id: userId } });
 
+    if (user && user.email && cert.expiryDate) {
+      // 2. Appeler le service Google Calendar
+      await this.googleCalendarService.scheduleEmployeeReminder(
+        user.full_name,
+        user.email,
+        cert.certName,
+        cert.expiryDate.toISOString(), // On envoie la date au format string
+      );
+      console.log(` Synchro Agenda réussie pour ${user.email}`);
+    }
+  } catch (err) {
+    console.error(" Erreur de synchronisation Agenda:", err.message);
+  }
+}
  
 }

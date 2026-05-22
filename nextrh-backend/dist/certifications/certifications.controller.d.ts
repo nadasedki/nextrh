@@ -14,7 +14,7 @@ export declare class CertificationsController {
         data?: undefined;
     } | {
         status: string;
-        data: import("./entities/certification.entity").Certification;
+        data: void;
         message: string;
     }>;
 }

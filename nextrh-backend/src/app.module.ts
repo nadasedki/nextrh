@@ -21,6 +21,11 @@ import { ExperienceModule } from './experience/experience.module';
 import { RagModule } from './rag/rag.module';
 import { GoogleCalendarService } from './google-calendar/google-calendar.service';
 import { GoogleCalendarController } from './google-calendar/google-calendar.controller';
+import { GoogleCalendarModule } from './google-calendar/google-calendar.module';
+import { CvGeneratorModule } from './cv-generator/cv-generator.module';
+
+import { CvGenerateModule } from './cv-generate/cv-generate.module';
+
 @Module({
  imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -45,7 +50,11 @@ import { GoogleCalendarController } from './google-calendar/google-calendar.cont
     ParserModule,
     CvParsingModule,
     ExperienceModule,
-    RagModule
+    RagModule,
+    GoogleCalendarModule,
+    CvGeneratorModule,
+    CvGenerateModule,
+    
     
   ],
  controllers: [ParserController, GoogleCalendarController],

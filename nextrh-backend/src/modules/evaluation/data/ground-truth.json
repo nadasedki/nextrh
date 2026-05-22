@@ -1,0 +1,26 @@
+[
+  {
+    "type": "certificate",
+    "filePath": "C:/Users/sedki/Desktop/nextrh_parsing/ale.pdf",
+    "expectedOcrSnippet": "ALE International recognizes that",
+    "expectedJson": {
+      "certificate_name": "ACFE OmniSwitch LAN R6/R7/R8",
+      "certificate_holder": "Aya BENJEMAA",
+      "provider": "ALE International",
+      "date_of_obtention": "Friday, March 04, 2016",
+      "date_of_expiration": null
+    }
+  },
+  {
+  "type": "certificate",
+  "filePath": "C:/Users/sedki/Desktop/nextrh_parsing/dell.pdf",
+  "expectedOcrSnippet": "Dell Worldwide Partner Learning and Development Team",
+  "expectedJson": {
+    "certificate_name": "GSTB5362WBTS - Enterprise Support Services Portfolio Overview - French",
+    "certificate_holder": "Aya Ben Jemaa",
+    "provider": "Dell Worldwide Partner Learning and Development Team",
+    "date_of_obtention": "Jan 31, 2017",
+    "date_of_expiration": "Jan 31, 2019"
+  }
+}
+]

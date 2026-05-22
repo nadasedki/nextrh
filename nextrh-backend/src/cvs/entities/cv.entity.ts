@@ -43,8 +43,9 @@ export class Cv {
   @Column({ nullable: true })
   address: string;
 
+@Column("simple-array", { nullable: true })
+skills: string[];
 
-  // --- Additional fields as needed ---
    @OneToMany(() => Education, (education) => education.cv, { cascade: true })
   educations: Education[];
 
