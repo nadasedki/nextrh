@@ -18,10 +18,12 @@ const typeorm_1 = require("typeorm");
 const typeorm_2 = require("@nestjs/typeorm");
 const training_entity_1 = require("./entities/training.entity");
 const user_entity_1 = require("../users/entities/user.entity");
+const scoring_service_1 = require("../scoring/scoring.service");
 let TrainingService = class TrainingService {
-    constructor(trainingRepository, userRepository) {
+    constructor(trainingRepository, userRepository, scoringService) {
         this.trainingRepository = trainingRepository;
         this.userRepository = userRepository;
+        this.scoringService = scoringService;
     }
     async create(userId, createDto) {
         const user = await this.userRepository.findOne({
@@ -34,12 +36,42 @@ let TrainingService = class TrainingService {
             ...createDto,
             user_id: userId,
         });
-        return await this.trainingRepository.save(training);
+        await this.trainingRepository.save(training);
+        await this.scoringService.calculateAndSaveScore(userId);
     }
     async findByUser(userId) {
         return this.trainingRepository.find({
             where: { user: { user_id: userId } },
         });
+    }
+    async update(userId, trainingId, updateDto) {
+        const training = await this.trainingRepository.findOne({
+            where: {
+                training_id: trainingId,
+                user_id: userId,
+            },
+        });
+        if (!training) {
+            throw new common_1.NotFoundException('Training not found');
+        }
+        Object.assign(training, updateDto);
+        return await this.trainingRepository.save(training);
+    }
+    async remove(userId, trainingId) {
+        const training = await this.trainingRepository.findOne({
+            where: {
+                training_id: trainingId,
+                user_id: userId,
+            },
+        });
+        if (!training) {
+            throw new common_1.NotFoundException('Training not found');
+        }
+        await this.trainingRepository.remove(training);
+        await this.scoringService.calculateAndSaveScore(userId);
+        return {
+            message: 'Training deleted successfully',
+        };
     }
 };
 exports.TrainingService = TrainingService;
@@ -48,6 +80,7 @@ exports.TrainingService = TrainingService = __decorate([
     __param(0, (0, typeorm_2.InjectRepository)(training_entity_1.Training)),
     __param(1, (0, typeorm_2.InjectRepository)(user_entity_1.User)),
     __metadata("design:paramtypes", [typeorm_1.Repository,
-        typeorm_1.Repository])
+        typeorm_1.Repository,
+        scoring_service_1.ScoringService])
 ], TrainingService);
 //# sourceMappingURL=training.service.js.map

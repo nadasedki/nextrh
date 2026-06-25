@@ -1,7 +1,7 @@
 import { CvParsingService } from './cv-parsing.service';
 export declare class CvParsingController {
-    private readonly cvService;
-    constructor(cvService: CvParsingService);
+    private readonly CvParsingService;
+    constructor(CvParsingService: CvParsingService);
     testPdf(body: {
         filePath: string;
     }): Promise<{

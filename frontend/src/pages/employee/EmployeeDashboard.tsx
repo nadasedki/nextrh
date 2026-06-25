@@ -3,12 +3,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/common';
-// Mocks removed
-import { Award, FileText, GraduationCap, Bell, ChevronRight, Upload, Clock, Loader2 } from 'lucide-react';
+import { Award, FileText, GraduationCap, Bell, ChevronRight, Upload, Clock, Loader2, Trophy, Zap, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
-// --- INTERFACES MATCHING BACKEND RESPONSE ---
+
 interface Cert {
   id: number;
   name: string;
@@ -46,7 +45,46 @@ const EmployeeDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   // -------------------------------------
+// --- SCORING STATE ---
+  const [score, setScore] = useState<number | null>(null);
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
+  // Fonction pour récupérer le score
+  const fetchScore = async () => {
+    if (!token || !user) return;
+    try {
+      const res = await fetch(`http://localhost:3000/scoring/user/${user.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setScore(data.score);
+    } catch (err) {
+      console.error('Error fetching score:', err);
+    }
+  };
+
+  // Fonction pour recalculer le score
+  const handleRecalculate = async () => {
+    if (!token || !user) return;
+    setIsRecalculating(true);
+    try {
+      const res = await fetch(`http://localhost:3000/scoring/recalculate/${user.id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setScore(data.score);
+    } catch (err) {
+      console.error('Error recalculating:', err);
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
+
+  // Charger le score au montage du composant
+  useEffect(() => {
+    fetchScore();
+  }, [user, token]);
   // --- FETCH DATA FROM BACKEND ---
   useEffect(() => {
     if (!token || !user) return;
@@ -139,7 +177,7 @@ const EmployeeDashboard: React.FC = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="animate-fade-in" style={{ animationDelay: '0ms' }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Certifications</CardTitle>
@@ -175,6 +213,33 @@ const EmployeeDashboard: React.FC = () => {
             <div className="text-3xl font-bold">{dashboardData?.projects.length || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Client engagements
+            </p>
+          </CardContent>
+        </Card>
+         <Card className="animate-fade-in border-primary/20 bg-primary/5" style={{ animationDelay: '300ms' }}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-primary">Expertise Score</CardTitle>
+            <Trophy className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="text-3xl font-bold text-primary">{score ?? '--'}</div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 hover:bg-primary/10" 
+                onClick={handleRecalculate}
+                disabled={isRecalculating}
+              >
+                {isRecalculating ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Zap className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Basé sur vos certifs et projets
             </p>
           </CardContent>
         </Card>

@@ -61,20 +61,29 @@ let ParserService = class ParserService {
     }
     async extractTextFromImage(imagePath) {
         const result = await tesseract.recognize(imagePath, 'eng');
-        return result.data.text;
+        return {
+            text: result.data.text,
+            confidence: result.data.confidence
+        };
     }
     async extractTextFromPdf(pdfPath) {
         const pages = await this.pdfToImages(pdfPath);
         console.log('Generated pages:', pages);
         let fullText = '';
+        let totalConfidence = 0;
         for (const page of pages) {
-            const text = await this.extractTextFromImage(page);
+            const { text, confidence } = await this.extractTextFromImage(page);
             fullText += text + '\n';
+            totalConfidence += confidence;
         }
-        console.log(' OCR TEXT:', fullText);
+        const averageConfidence = pages.length > 0 ? parseFloat((totalConfidence / pages.length).toFixed(2)) : 0;
+        console.log(' AVERAGE OCR CONFIDENCE:', averageConfidence);
         const cleanedText = this.cleanText(fullText);
         console.log('FINAL OCR TEXT:', cleanedText);
-        return cleanedText;
+        return {
+            text: cleanedText,
+            confidence: averageConfidence
+        };
     }
     cleanText(text) {
         if (!text)
@@ -93,6 +102,25 @@ let ParserService = class ParserService {
         })
             .filter(line => line.length > 0)
             .join('\n');
+    }
+    formatDateToISO(dateStr) {
+        if (!dateStr || String(dateStr).trim().toLowerCase() === 'null' || dateStr.trim() === '')
+            return null;
+        let cleanedStr = dateStr
+            .trim()
+            .replace(/^(monday|tuesday|wednesday|thursday|friday|saturday|sunday|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)[,\s]+/i, '')
+            .replace(/janvier/i, 'January').replace(/fevrier/i, 'February').replace(/mars/i, 'March')
+            .replace(/avril/i, 'April').replace(/mai/i, 'May').replace(/juin/i, 'June')
+            .replace(/juillet/i, 'July').replace(/aout/i, 'August').replace(/septembre/i, 'September')
+            .replace(/octobre/i, 'October').replace(/novembre/i, 'November').replace(/decembre/i, 'December');
+        const timestamp = Date.parse(cleanedStr);
+        if (isNaN(timestamp))
+            return dateStr;
+        const d = new Date(timestamp);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     }
 };
 exports.ParserService = ParserService;

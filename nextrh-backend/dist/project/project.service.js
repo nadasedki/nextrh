@@ -17,9 +17,12 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const project_entity_1 = require("./entities/project.entity");
+const common_2 = require("@nestjs/common");
+const scoring_service_1 = require("../scoring/scoring.service");
 let ProjectService = class ProjectService {
-    constructor(projectRepository) {
+    constructor(projectRepository, scoringService) {
         this.projectRepository = projectRepository;
+        this.scoringService = scoringService;
     }
     async create(userId, createDto) {
         const { startDate, endDate, ...otherData } = createDto;
@@ -30,6 +33,7 @@ let ProjectService = class ProjectService {
             end_date: endDate ? new Date(endDate) : null,
         });
         const savedProject = await this.projectRepository.save(newProject);
+        await this.scoringService.calculateAndSaveScore(userId);
         return {
             ...savedProject,
             startDate: savedProject.start_date,
@@ -89,11 +93,42 @@ let ProjectService = class ProjectService {
             endDate: new Date(parseInt(years[1]), 11, 31),
         };
     }
+    async update(id, userId, updateDto) {
+        const project = await this.projectRepository.findOne({
+            where: { id, user_id: userId },
+        });
+        if (!project) {
+            throw new common_2.NotFoundException('Project not found or unauthorized');
+        }
+        const { startDate, endDate, ...otherData } = updateDto;
+        Object.assign(project, otherData);
+        if (startDate)
+            project.start_date = new Date(startDate);
+        if (endDate)
+            project.end_date = new Date(endDate);
+        const saved = await this.projectRepository.save(project);
+        return {
+            ...saved,
+            startDate: saved.start_date,
+            endDate: saved.end_date,
+        };
+    }
+    async remove(id, userId) {
+        const project = await this.projectRepository.findOne({
+            where: { id, user_id: userId },
+        });
+        if (!project) {
+            throw new common_2.NotFoundException('Project not found or unauthorized');
+        }
+        await this.projectRepository.remove(project);
+        await this.scoringService.calculateAndSaveScore(userId);
+    }
 };
 exports.ProjectService = ProjectService;
 exports.ProjectService = ProjectService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(project_entity_1.Project)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        scoring_service_1.ScoringService])
 ], ProjectService);
 //# sourceMappingURL=project.service.js.map

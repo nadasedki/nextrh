@@ -15,10 +15,10 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 export class CvParsingController {
 
 
-  constructor(private readonly cvService: CvParsingService) {}
+  constructor(private readonly CvParsingService: CvParsingService) {}
 @Post('test')
 async testPdf(@Body() body: { filePath: string }) {
-  const text = await this.cvService.extractTextFromPdf(body.filePath);
+  const text = await this.CvParsingService.extractTextFromPdf(body.filePath);
 
   return {
     status: 'success',
@@ -76,7 +76,7 @@ async testPdf(@Body() body: { filePath: string }) {
     //const rawText = await this.cvService.extractTextFromPdf(absolutePath);
     //const organizedData = await this.cvService.parseEntireCv(rawText);
       const employeeId = req.user.userId;
-      const organizedData = await this.cvService.processPdf(absolutePath, employeeId);
+      const organizedData = await this.CvParsingService.processPdf(absolutePath, employeeId);
     return {
       status: "success",
       data: organizedData,

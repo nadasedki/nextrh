@@ -88,6 +88,58 @@ let ExperienceService = class ExperienceService {
             endDate: e.end_date,
         }));
     }
+    async update(id, userId, data) {
+        const exp = await this.experienceRepo.findOne({
+            where: { id, user_id: userId }
+        });
+        if (!exp) {
+            throw new Error('Experience not found or unauthorized');
+        }
+        const { startDate, endDate, ...rest } = data;
+        Object.assign(exp, rest);
+        if (startDate)
+            exp.start_date = new Date(startDate);
+        if (endDate)
+            exp.end_date = new Date(endDate);
+        const saved = await this.experienceRepo.save(exp);
+        return {
+            id: saved.id,
+            company: saved.company,
+            role: saved.role,
+            description: saved.description,
+            startDate: saved.start_date,
+            endDate: saved.end_date,
+        };
+    }
+    async remove(id, userId) {
+        const exp = await this.experienceRepo.findOne({
+            where: { id, user_id: userId }
+        });
+        if (!exp) {
+            throw new Error('Experience not found or unauthorized');
+        }
+        return await this.experienceRepo.remove(exp);
+    }
+    async calculateTotalExperience(userId) {
+        const experiences = await this.experienceRepo.find({
+            where: { user_id: userId },
+        });
+        let totalMonths = 0;
+        const now = new Date();
+        for (const exp of experiences) {
+            if (!exp.start_date)
+                continue;
+            const start = new Date(exp.start_date);
+            const end = exp.end_date ? new Date(exp.end_date) : now;
+            let months = (end.getFullYear() - start.getFullYear()) * 12 +
+                (end.getMonth() - start.getMonth());
+            if (end.getDate() < start.getDate()) {
+                months -= 1;
+            }
+            totalMonths += Math.max(0, months);
+        }
+        return Math.floor(totalMonths / 12);
+    }
 };
 exports.ExperienceService = ExperienceService;
 exports.ExperienceService = ExperienceService = __decorate([

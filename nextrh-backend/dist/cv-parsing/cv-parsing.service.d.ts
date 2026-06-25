@@ -3,9 +3,11 @@ import { HeuristicParserService } from './heuristic-parser/heuristic-parser.serv
 import { LlmService } from 'src/cv-parsing/llm/llm.service';
 import { CvService } from 'src/cvs/cv.service';
 import { EducationService } from 'src/education/education.service';
-import { CertificationsService } from 'src/certifications/certifications.service';
+import { CertificationsService } from 'src/certifications/services/certifications.service';
 import { ProjectService } from 'src/project/project.service';
 import { ExperienceService } from 'src/experience/experience.service';
+import { UsersService } from 'src/users/users.service';
+import { ScoringService } from 'src/scoring/scoring.service';
 export declare class CvParsingService {
     private pdfExtractor;
     private heuristicParser;
@@ -14,9 +16,11 @@ export declare class CvParsingService {
     private educationService;
     private certificationsService;
     private projectsService;
+    private usersService;
     private experienceService;
+    private scoringService;
     private readonly logger;
-    constructor(pdfExtractor: PdfExtractorService, heuristicParser: HeuristicParserService, llmService: LlmService, cvService: CvService, educationService: EducationService, certificationsService: CertificationsService, projectsService: ProjectService, experienceService: ExperienceService);
+    constructor(pdfExtractor: PdfExtractorService, heuristicParser: HeuristicParserService, llmService: LlmService, cvService: CvService, educationService: EducationService, certificationsService: CertificationsService, projectsService: ProjectService, usersService: UsersService, experienceService: ExperienceService, scoringService: ScoringService);
     processPdf(pdfPath: string, employeeId: number): Promise<{
         contact: {
             name: string;

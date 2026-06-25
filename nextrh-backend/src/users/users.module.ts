@@ -6,9 +6,12 @@ import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { TeamsModule } from 'src/teams/teams.module'; 
 import { AuthModule } from 'src/auth/auth.module';
+import { ExperienceModule } from 'src/experience/experience.module';
+import { Experience } from 'src/experience/entities/experience.entity';
 @Module({
-     imports: [TypeOrmModule.forFeature([User, Role]),
+     imports: [TypeOrmModule.forFeature([User, Role,Experience]),
      forwardRef(() => TeamsModule),
+     ExperienceModule,
     ],
   providers: [UsersService],
   controllers: [UsersController],

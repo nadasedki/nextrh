@@ -1,9 +1,14 @@
 import { CvService } from './cv.service';
+import { CvImportService } from './cv-import/cv-import.service';
 export declare class CvController {
     private readonly cvService;
-    constructor(cvService: CvService);
-    uploadCv(req: any, file: Express.Multer.File, body: any): Promise<{
+    private readonly cvImportService;
+    private readonly logger;
+    constructor(cvService: CvService, cvImportService: CvImportService);
+    uploadCv(req: any, file: Express.Multer.File): Promise<{
         status: string;
-        data: import("./entities/cv.entity").Cv;
+        cvId: number;
+        metrics: any;
+        data: any;
     }>;
 }

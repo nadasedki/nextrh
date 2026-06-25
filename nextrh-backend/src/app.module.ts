@@ -25,6 +25,9 @@ import { GoogleCalendarModule } from './google-calendar/google-calendar.module';
 import { CvGeneratorModule } from './cv-generator/cv-generator.module';
 
 import { CvGenerateModule } from './cv-generate/cv-generate.module';
+import { DocumentModule } from './document-manager/document.module';
+import { ScoringModule } from './scoring/scoring.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
  imports: [
@@ -39,6 +42,7 @@ import { CvGenerateModule } from './cv-generate/cv-generate.module';
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true, // dev only!
     }),
+     EventEmitterModule.forRoot(),
     UsersModule,
     AuthModule,
     CertificationsModule,
@@ -54,11 +58,14 @@ import { CvGenerateModule } from './cv-generate/cv-generate.module';
     GoogleCalendarModule,
     CvGeneratorModule,
     CvGenerateModule,
+    DocumentModule,
+    ScoringModule,
+
     
     
   ],
- controllers: [ParserController, GoogleCalendarController],
- providers: [ParserService, GoogleCalendarService],
+ controllers: [ GoogleCalendarController],
+ providers: [ GoogleCalendarService],
 
 })
 export class AppModule {}

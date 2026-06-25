@@ -1,0 +1,63 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { CvParserFacade } from 'src/document-manager/services/cv-parser.facade'; // Your pure parsing facade
+import { CvService } from 'src/cvs/cv.service';
+import { EducationService } from 'src/education/education.service';
+import { CertificationsService } from 'src/certifications/services/certifications.service';
+import { ProjectService } from 'src/project/project.service';
+import { ExperienceService } from 'src/experience/experience.service';
+import { UsersService } from 'src/users/users.service';
+import { ScoringService } from 'src/scoring/scoring.service';
+
+@Injectable()
+export class CvImportService {
+  private readonly logger = new Logger(CvImportService.name);
+
+  constructor(
+    private readonly cvParserFacade: CvParserFacade, 
+    private readonly cvService: CvService,
+    private readonly educationService: EducationService,
+    private readonly certificationsService: CertificationsService,
+    private readonly projectsService: ProjectService,
+    private readonly usersService: UsersService,
+    private readonly experienceService: ExperienceService,
+    private readonly scoringService: ScoringService,
+  ) {}
+
+  /**
+   * Orchestrates the parsing extraction and database storage sequence.
+   */
+  async uploadAndSaveCv(fileBuffer: Buffer, employeeId: number, originalName: string) {
+    this.logger.log(` Starting execution pipeline for employee ID: ${employeeId}`);
+
+    // 1. Get the pure, clean JSON data from your Facade (No DB interactions inside)
+    const parseResult = await this.cvParserFacade.parseCv(fileBuffer);
+    const result = parseResult.data;
+
+    // 2. Database saving logic sequentially executed here
+    this.logger.log(` Saving extracted identity details to database...`);
+    const savedCv = await this.cvService.saveIdentityCv(employeeId, originalName, result);
+
+    await this.usersService.updateProfileFromCv(employeeId, savedCv.full_name, savedCv.profession);
+    
+    // 3. Populate all related relational tables
+    await this.educationService.createParsedEducation(result.education, employeeId, savedCv);
+    await this.certificationsService.createBulkFromParsedData(result.certifications, employeeId, originalName, savedCv);
+    await this.projectsService.createBulkFromParsedData(result.projects, employeeId, savedCv);
+    await this.experienceService.createBulkFromParsedData(result.experience, employeeId, savedCv);
+
+    // 4. Calculate post-import analytics and scoring metrics
+    const years = await this.experienceService.calculateTotalExperience(employeeId);
+    await this.usersService.updateYearsOfExperience(employeeId, years);
+    
+    this.logger.log(` Re-calculating scoring match vectors...`);
+    await this.scoringService.calculateAndSaveScore(employeeId);
+
+    // Return the clean result back to the controller
+    return {
+      status: 'success',
+      cvId: savedCv.cv_id,
+      metrics: parseResult.execution_metrics,
+      data: result
+    };
+  }
+}

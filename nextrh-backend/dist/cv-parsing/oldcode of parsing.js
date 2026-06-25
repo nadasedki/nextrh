@@ -52,7 +52,7 @@ const heuristic_parser_service_1 = require("./heuristic-parser/heuristic-parser.
 const llm_service_1 = require("./llm/llm.service");
 const cv_service_1 = require("../cvs/cv.service");
 const education_service_1 = require("../education/education.service");
-const certifications_service_1 = require("../certifications/certifications.service");
+const certifications_service_1 = require("../certifications/services/certifications.service");
 const project_service_1 = require("../project/project.service");
 const experience_service_1 = require("../experience/experience.service");
 let CvParsingService = CvParsingService_1 = class CvParsingService {

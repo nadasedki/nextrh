@@ -46,7 +46,7 @@ export class AuthService {
             <p>Bonjour <strong>${name}</strong>,</p>
             <p>Un compte collaborateur a été créé pour vous par votre Team Leader.</p>
             <div style="background-color: #f8fafc; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0;">
-              <p style="margin: 5px 0;"><strong>Lien de connexion :</strong> <a href="http://localhost:5173/login">Portail RH</a></p>
+              <p style="margin: 5px 0;"><strong>Lien de connexion :</strong> <a href="http://localhost:8080/login">Portail RH</a></p>
               <p style="margin: 5px 0;"><strong>Identifiant :</strong> ${email}</p>
               <p style="margin: 5px 0;"><strong>Mot de passe temporaire :</strong> <code>${password}</code></p>
             </div>
@@ -87,7 +87,7 @@ export class AuthService {
 
     const user = await this.validateUser(email, password, requestedRole);
 
-    const payload = { sub: user.user_id, email: user.email, role: requestedRole };
+    const payload = { sub: user.user_id, email: user.email, role: requestedRole,full_name: user.full_name };
 
     return {
       access_token: this.jwtService.sign(payload),
@@ -106,9 +106,7 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(dto.password_hash, 10);
     return this.usersService.create({ ...dto, password_hash: hashedPassword });
   }
-  // src/auth/auth.service.ts
 
-// ... constructor and other methods ...
 
 async forgotPassword(dto: ForgotPasswordDto) {
   const { email } = dto; // Extract email from DTO

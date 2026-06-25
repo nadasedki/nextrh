@@ -52,11 +52,13 @@ const heuristic_parser_service_1 = require("./heuristic-parser/heuristic-parser.
 const llm_service_1 = require("./llm/llm.service");
 const cv_service_1 = require("../cvs/cv.service");
 const education_service_1 = require("../education/education.service");
-const certifications_service_1 = require("../certifications/certifications.service");
+const certifications_service_1 = require("../certifications/services/certifications.service");
 const project_service_1 = require("../project/project.service");
 const experience_service_1 = require("../experience/experience.service");
+const users_service_1 = require("../users/users.service");
+const scoring_service_1 = require("../scoring/scoring.service");
 let CvParsingService = CvParsingService_1 = class CvParsingService {
-    constructor(pdfExtractor, heuristicParser, llmService, cvService, educationService, certificationsService, projectsService, experienceService) {
+    constructor(pdfExtractor, heuristicParser, llmService, cvService, educationService, certificationsService, projectsService, usersService, experienceService, scoringService) {
         this.pdfExtractor = pdfExtractor;
         this.heuristicParser = heuristicParser;
         this.llmService = llmService;
@@ -64,13 +66,24 @@ let CvParsingService = CvParsingService_1 = class CvParsingService {
         this.educationService = educationService;
         this.certificationsService = certificationsService;
         this.projectsService = projectsService;
+        this.usersService = usersService;
         this.experienceService = experienceService;
+        this.scoringService = scoringService;
         this.logger = new common_1.Logger(CvParsingService_1.name);
     }
     async processPdf(pdfPath, employeeId) {
         const rawText = await this.pdfExtractor.extractRawText(pdfPath);
         console.log("RAW TEXT EXTRACTED:", rawText);
         const result = await this.parseEntireCv(rawText);
+        const savedCv = await this.cvService.saveIdentityCv(employeeId, pdfPath, result);
+        await this.usersService.updateProfileFromCv(employeeId, savedCv.full_name, savedCv.profession);
+        await this.educationService.createParsedEducation(result.education, employeeId, savedCv);
+        await this.certificationsService.createBulkFromParsedData(result.certifications, employeeId, pdfPath, savedCv);
+        await this.projectsService.createBulkFromParsedData(result.projects, employeeId, savedCv);
+        await this.experienceService.createBulkFromParsedData(result.experience, employeeId, savedCv);
+        const years = await this.experienceService.calculateTotalExperience(employeeId);
+        await this.usersService.updateYearsOfExperience(employeeId, years);
+        await this.scoringService.calculateAndSaveScore(employeeId);
         return result;
     }
     async extractTextFromPdf(pdfPath) {
@@ -180,6 +193,8 @@ exports.CvParsingService = CvParsingService = CvParsingService_1 = __decorate([
         education_service_1.EducationService,
         certifications_service_1.CertificationsService,
         project_service_1.ProjectService,
-        experience_service_1.ExperienceService])
+        users_service_1.UsersService,
+        experience_service_1.ExperienceService,
+        scoring_service_1.ScoringService])
 ], CvParsingService);
 //# sourceMappingURL=cv-parsing.service.js.map

@@ -8,9 +8,11 @@ import { HeuristicParserService } from './heuristic-parser/heuristic-parser.serv
 import { LlmService } from 'src/cv-parsing/llm/llm.service';
 import { CvService } from 'src/cvs/cv.service';
 import { EducationService } from 'src/education/education.service';
-import { CertificationsService } from 'src/certifications/certifications.service';
+import { CertificationsService } from 'src/certifications/services/certifications.service';
 import { ProjectService } from 'src/project/project.service';
 import { ExperienceService } from 'src/experience/experience.service';
+import { UsersService } from 'src/users/users.service';
+import { ScoringService } from 'src/scoring/scoring.service';
 @Injectable()
 export class CvParsingService {
   private readonly logger = new Logger(CvParsingService.name);
@@ -22,20 +24,27 @@ export class CvParsingService {
     private educationService: EducationService,
     private certificationsService: CertificationsService,
     private projectsService: ProjectService,
-     private experienceService: ExperienceService,
+    private usersService: UsersService,
+    private experienceService: ExperienceService,
+    private scoringService: ScoringService,
   ) {}
   
   async processPdf(pdfPath: string,employeeId: number) {
     const rawText = await this.pdfExtractor.extractRawText(pdfPath);
     console.log("RAW TEXT EXTRACTED:", rawText);
      const result = await this.parseEntireCv(rawText);
-     /* data saveing logic here (e.g., save to DB) can be added before returning the result
+     // data saveing logic here (e.g., save to DB) can be added before returning the result
     const savedCv = await this.cvService.saveIdentityCv(employeeId, pdfPath, result);
+    await this.usersService.updateProfileFromCv(employeeId,savedCv.full_name, savedCv.profession,);
     await this.educationService.createParsedEducation(result.education, employeeId, savedCv);
     await this.certificationsService.createBulkFromParsedData(result.certifications, employeeId,pdfPath,savedCv);
     await this.projectsService.createBulkFromParsedData(result.projects, employeeId,savedCv);
     await this.experienceService.createBulkFromParsedData(result.experience, employeeId,savedCv);
-    */
+    const years = await this.experienceService.calculateTotalExperience(employeeId);
+    await this.usersService.updateYearsOfExperience(employeeId, years);
+      // MISE À JOUR DU SCORE ICI
+    await this.scoringService.calculateAndSaveScore(employeeId);
+    
     return result ;
   }
 // a supprimer

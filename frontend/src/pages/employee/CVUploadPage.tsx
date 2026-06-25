@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react'; // ◄ Added useRef
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { UploadProgress } from '@/components/common';
@@ -21,9 +21,11 @@ const CVUploadPage: React.FC = () => {
   const [file, setFile] = useState<UploadedFileInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // --- NEW: Real Upload Handler ---
+  // ◄ Refs to track background tasks across renders
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
   const handleUpload = useCallback(async (uploadedFile: File) => {
-    // Set UI basic info
     setFile({
       name: uploadedFile.name,
       size: uploadedFile.size,
@@ -31,27 +33,32 @@ const CVUploadPage: React.FC = () => {
     });
     setError(null);
     setUploadStatus('uploading');
-    setProgress(10); // Initial progress
+    setProgress(10);
 
     const formData = new FormData();
     formData.append('file', uploadedFile);
 
+    // ◄ Instantiate a new controller for this specific request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       const token = localStorage.getItem('token');
       
-      // Update progress to simulate network activity
-      const progInterval = setInterval(() => setProgress(prev => (prev < 90 ? prev + 5 : prev)), 200);
+      intervalRef.current = setInterval(() => {
+        setProgress(prev => (prev < 90 ? prev + 5 : prev));
+      }, 200);
 
-      const response = await fetch('http://localhost:3000/cv-parsing/upload', {
+      const response = await fetch('http://localhost:3000/cvs/upload', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
-          // Content-Type is set automatically by the browser for FormData
         },
         body: formData,
+        signal: controller.signal, // ◄ Attach the cancellation anchor here
       });
 
-      clearInterval(progInterval);
+      if (intervalRef.current) clearInterval(intervalRef.current);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -61,17 +68,44 @@ const CVUploadPage: React.FC = () => {
       setProgress(100);
       setUploadStatus('parsing');
 
-      // Small delay to let the user see "Parsing" status
       setTimeout(() => {
         setUploadStatus('completed');
       }, 1500);
 
     } catch (err: any) {
+      // ◄ Ignore updating the error UI if it was canceled intentionally
+      if (err.name === 'AbortError') {
+        console.log('Upload request aborted by user.');
+        return;
+      }
+      
+      if (intervalRef.current) clearInterval(intervalRef.current);
       console.error('Upload error:', err);
       setError(err.message || 'An error occurred during upload');
       setUploadStatus('error');
     }
   }, []);
+
+  // ◄ Enriched Reset Action
+  const handleCancelAndReset = () => {
+    // 1. Cancel the HTTP request immediately
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+
+    // 2. Kill the progress UI interval loop
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    // 3. Revert states back to pristine clean values
+    setFile(null);
+    setUploadStatus('idle');
+    setProgress(0);
+    setError(null);
+  };
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -114,13 +148,6 @@ const CVUploadPage: React.FC = () => {
     },
     [handleUpload]
   );
-
-  const handleReset = () => {
-    setFile(null);
-    setUploadStatus('idle');
-    setProgress(0);
-    setError(null);
-  };
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B';
@@ -255,71 +282,67 @@ const CVUploadPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Steps UI */}
-            {/* Status Steps UI */}
-<div className="flex items-center justify-center gap-2 py-4">
-  {['Uploading', 'Parsing', 'Completed'].map((step, index) => {
-    // 1. A step is "Active" ONLY if it is currently spinning
-    const isActive =
-      (index === 0 && uploadStatus === 'uploading') ||
-      (index === 1 && uploadStatus === 'parsing');
+                <div className="flex items-center justify-center gap-2 py-4">
+                  {['Uploading', 'Parsing', 'Completed'].map((step, index) => {
+                    const isActive =
+                      (index === 0 && uploadStatus === 'uploading') ||
+                      (index === 1 && uploadStatus === 'parsing');
 
-    // 2. A step is "Completed" if the logic has moved past it
-    const isCompleted =
-      (index === 0 && ['parsing', 'completed'].includes(uploadStatus)) ||
-      (index === 1 && uploadStatus === 'completed') ||
-      (index === 2 && uploadStatus === 'completed'); // The final checkmark
+                    const isCompleted =
+                      (index === 0 && ['parsing', 'completed'].includes(uploadStatus)) ||
+                      (index === 1 && uploadStatus === 'completed') ||
+                      (index === 2 && uploadStatus === 'completed');
 
-    return (
-      <React.Fragment key={step}>
-        <div
-          className={cn(
-            'flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-colors',
-            isActive ? 'bg-primary text-primary-foreground' : 
-            isCompleted ? 'bg-success/10 text-success' : 
-            'bg-muted text-muted-foreground'
-          )}
-        >
-          {isCompleted ? (
-            <CheckCircle className="h-4 w-4" />
-          ) : isActive ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <span className="h-4 w-4 flex items-center justify-center text-xs">
-              {index + 1}
-            </span>
-          )}
-          {step}
-        </div>
-        {index < 2 && (
-          <div
-            className={cn(
-              'w-8 h-0.5 rounded-full',
-              // The line turns green if the step BEFORE it is finished
-              (index === 0 && ['parsing', 'completed'].includes(uploadStatus)) ||
-              (index === 1 && uploadStatus === 'completed')
-                ? 'bg-success'
-                : 'bg-muted'
-            )}
-          />
-        )}
-      </React.Fragment>
-    );
-  })}
-</div>
+                    return (
+                      <React.Fragment key={step}>
+                        <div
+                          className={cn(
+                            'flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-colors',
+                            isActive ? 'bg-primary text-primary-foreground' : 
+                            isCompleted ? 'bg-success/10 text-success' : 
+                            'bg-muted text-muted-foreground'
+                          )}
+                        >
+                          {isCompleted ? (
+                            <CheckCircle className="h-4 w-4" />
+                          ) : isActive ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <span className="h-4 w-4 flex items-center justify-center text-xs">
+                              {index + 1}
+                            </span>
+                          )}
+                          {step}
+                        </div>
+                        {index < 2 && (
+                          <div
+                            className={cn(
+                              'w-8 h-0.5 rounded-full',
+                              (index === 0 && ['parsing', 'completed'].includes(uploadStatus)) ||
+                              (index === 1 && uploadStatus === 'completed')
+                                ? 'bg-success'
+                                : 'bg-muted'
+                            )}
+                          />
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="flex justify-center gap-3">
                 {uploadStatus === 'completed' ? (
                   <>
-                    <Button variant="outline" onClick={handleReset}>Upload Another</Button>
+                    <Button variant="outline" onClick={handleCancelAndReset}>Upload Another</Button>
                     <Button onClick={() => navigate('/employee/cv-preview')}>
                       <FileText className="h-4 w-4 mr-2" />
                       View CV
                     </Button>
                   </>
                 ) : (
-                  <Button variant="outline" onClick={handleReset}>Cancel</Button>
+                  // ◄ Hooked to the safe cancellation function
+                  <Button variant="outline" onClick={handleCancelAndReset}>Cancel</Button>
                 )}
               </div>
             </div>

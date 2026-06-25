@@ -14,13 +14,13 @@ export class EmployeesController {
   async findMe(@Req() req) {
     // Extract userId from JWT
     const userId = req.user?.userId || req.user?.sub || req.user?.id || req.user?.user_id;
-    console.log('🚨 GET /employees/me - userId:', userId);
+    console.log(' GET /employees/me - userId:', userId);
     return this.employeesService.getDashboardData(userId);
   }
   @Get('me/cv')
   async getMyCvData(@Req() req) {
     const userId = req.user?.userId;
-    console.log('🚨 GET /employees/me/cv - userId:', userId);
+    console.log(' GET /employees/me/cv - userId:', userId);
     return this.employeesService.getFullEmployeeCv(userId);
   }
   @Get()

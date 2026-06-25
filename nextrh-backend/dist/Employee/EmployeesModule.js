@@ -18,6 +18,7 @@ const certification_entity_1 = require("../certifications/entities/certification
 const cv_entity_1 = require("../cvs/entities/cv.entity");
 const user_skill_entity_1 = require("../skill/entities/user-skill.entity");
 const team_entity_1 = require("../users/entities/team.entity");
+const education_entity_1 = require("../education/entities/education.entity");
 let EmployeesModule = class EmployeesModule {
 };
 exports.EmployeesModule = EmployeesModule;
@@ -31,7 +32,7 @@ exports.EmployeesModule = EmployeesModule = __decorate([
                 certification_entity_1.Certification,
                 cv_entity_1.Cv,
                 user_skill_entity_1.UserSkill,
-                team_entity_1.Team
+                team_entity_1.Team, education_entity_1.Education
             ]),
         ],
         controllers: [employees_controller_1.EmployeesController],

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Search, Eye, Award, Loader2, Users } from 'lucide-react';
+import { Search, Eye, Award, Loader2, Users ,Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -14,7 +14,7 @@ interface ApiEmployee {
   full_name: string;
   title: string | null;
   years_of_experience: number;
-  // Nested structure from JSON: userSkills -> skill -> skill_name
+  score: number;
   userSkills: { skill: { skill_name: string } }[];
   certifications: { certName: string; status: string }[];
 }
@@ -132,7 +132,12 @@ const EmployeeDirectoryPage: React.FC = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* 5. Map over displayedEmployees (filtered list) */}
         {displayedEmployees.map((emp) => (
-          <Card key={emp.user_id} className="hover:shadow-md transition-shadow">
+          <Card key={emp.user_id} className="relative overflow-hidden hover:shadow-md transition-shadow">
+            {/* Badge de Score en haut à droite */}
+    <div className="absolute top-0 right-0 bg-primary/10 px-3 py-1.5 rounded-bl-xl flex items-center gap-1.5 border-l border-b border-primary/20 shadow-sm">
+      <Trophy className="h-3.5 w-3.5 text-primary" />
+      <span className="text-sm font-bold text-primary">{emp.score || 0}</span>
+    </div>
             <CardContent className="p-5">
               <div className="flex items-start gap-4">
                 <Avatar className="h-12 w-12">

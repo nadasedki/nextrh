@@ -16,8 +16,7 @@ interface ChatMessage {
 }
 
 const suggestedQueries = [
-  "Est-ce qu'il y a un CV pour Amal ?",
-  "Quelles sont les compétences de Anouar ?",
+  
   "Trouve-moi un ingénieur sécurité réseaux",
 ];
 

@@ -23,6 +23,8 @@ const project_entity_1 = require("../project/entities/project.entity");
 const project_module_1 = require("../project/project.module");
 const experience_module_1 = require("../experience/experience.module");
 const experience_entity_1 = require("../experience/entities/experience.entity");
+const users_module_1 = require("../users/users.module");
+const scoring_module_1 = require("../scoring/scoring.module");
 let CvParsingModule = class CvParsingModule {
 };
 exports.CvParsingModule = CvParsingModule;
@@ -30,7 +32,7 @@ exports.CvParsingModule = CvParsingModule = __decorate([
     (0, common_1.Module)({
         imports: [typeorm_1.TypeOrmModule.forFeature([cv_entity_1.Cv]), cv_module_1.CvModule, education_module_1.EducationModule, typeorm_1.TypeOrmModule.forFeature([education_entity_1.Education]),
             certifications_module_1.CertificationsModule, project_module_1.ProjectModule, typeorm_1.TypeOrmModule.forFeature([project_entity_1.Project]),
-            experience_module_1.ExperienceModule, typeorm_1.TypeOrmModule.forFeature([experience_entity_1.Experience])],
+            experience_module_1.ExperienceModule, typeorm_1.TypeOrmModule.forFeature([experience_entity_1.Experience]), users_module_1.UsersModule, scoring_module_1.ScoringModule],
         providers: [cv_parsing_service_1.CvParsingService, pdf_extractor_service_1.PdfExtractorService, heuristic_parser_service_1.HeuristicParserService, llm_service_1.LlmService],
         controllers: [cv_parsing_controller_1.CvParsingController]
     })

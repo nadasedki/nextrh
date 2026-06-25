@@ -23,9 +23,8 @@ let CvGenerateController = class CvGenerateController {
     async generatePdf(cvId, file, res) {
         const pdfBuffer = await this.generateService.processSmartPdf(+cvId, file);
         res.set({
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': `attachment; filename=CV_Generated_${cvId}.pdf`,
-            'Content-Length': pdfBuffer.length,
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition': `attachment; filename=CV_Generated_${cvId}.docx`,
         });
         res.end(pdfBuffer);
     }

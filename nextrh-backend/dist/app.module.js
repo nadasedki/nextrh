@@ -18,8 +18,6 @@ const project_module_1 = require("./project/project.module");
 const EmployeesModule_1 = require("./Employee/EmployeesModule");
 const skills_module_1 = require("./skill/skills.module");
 const cv_module_1 = require("./cvs/cv.module");
-const parser_controller_1 = require("./parser/parser.controller");
-const parser_service_1 = require("./parser/parser.service");
 const parser_module_1 = require("./parser/parser.module");
 const cv_parsing_module_1 = require("./cv-parsing/cv-parsing.module");
 const experience_module_1 = require("./experience/experience.module");
@@ -29,6 +27,9 @@ const google_calendar_controller_1 = require("./google-calendar/google-calendar.
 const google_calendar_module_1 = require("./google-calendar/google-calendar.module");
 const cv_generator_module_1 = require("./cv-generator/cv-generator.module");
 const cv_generate_module_1 = require("./cv-generate/cv-generate.module");
+const document_module_1 = require("./document-manager/document.module");
+const scoring_module_1 = require("./scoring/scoring.module");
+const event_emitter_1 = require("@nestjs/event-emitter");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -46,6 +47,7 @@ exports.AppModule = AppModule = __decorate([
                 entities: [__dirname + '/**/*.entity{.ts,.js}'],
                 synchronize: true,
             }),
+            event_emitter_1.EventEmitterModule.forRoot(),
             users_module_1.UsersModule,
             auth_module_1.AuthModule,
             certifications_module_1.CertificationsModule,
@@ -61,9 +63,11 @@ exports.AppModule = AppModule = __decorate([
             google_calendar_module_1.GoogleCalendarModule,
             cv_generator_module_1.CvGeneratorModule,
             cv_generate_module_1.CvGenerateModule,
+            document_module_1.DocumentModule,
+            scoring_module_1.ScoringModule,
         ],
-        controllers: [parser_controller_1.ParserController, google_calendar_controller_1.GoogleCalendarController],
-        providers: [parser_service_1.ParserService, google_calendar_service_1.GoogleCalendarService],
+        controllers: [google_calendar_controller_1.GoogleCalendarController],
+        providers: [google_calendar_service_1.GoogleCalendarService],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

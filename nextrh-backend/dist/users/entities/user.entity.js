@@ -61,6 +61,10 @@ __decorate([
     __metadata("design:type", Array)
 ], User.prototype, "userSkills", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ default: 0 }),
+    __metadata("design:type", Number)
+], User.prototype, "score", void 0);
+__decorate([
     (0, typeorm_1.ManyToMany)(() => role_entity_1.Role),
     (0, typeorm_1.JoinTable)({
         name: 'user_roles',

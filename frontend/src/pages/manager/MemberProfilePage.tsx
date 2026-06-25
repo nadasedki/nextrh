@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { StatusBadge } from '@/components/common';
-import { ArrowLeft, Mail, Building2, Calendar, Award, Briefcase, GraduationCap, Code, Loader2 } from 'lucide-react';
+import { ArrowLeft, Mail, Building2, Calendar, Award, Briefcase, GraduationCap, Code, Loader2, Phone, MapPin, Hash } from 'lucide-react';
 import { format } from 'date-fns';
 
 // 2. Define Interface based on your DB Schema & Postman Response
@@ -45,12 +45,18 @@ interface UserProfile {
   user_id: number;
   full_name: string;
   email: string;
-  title: string | null;
+  cv_full_name?: string;
+  cv_profession?: string;
+  cv_phone?: string;
+  cv_fax?: string;
+  cv_address?: string;
+  cv_skills?: string[];
+  cv_email?: string;
+
   years_of_experience: number;
-  summary: string | null;
-  userSkills: UserSkill[];
+
   certifications: Certification[];
-  department?: string;
+
   projects?: Project[]; 
   trainings?: Training[]; 
 }
@@ -144,26 +150,29 @@ const MemberProfilePage: React.FC = () => {
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-foreground">{member.full_name}</h1>
-              <p className="text-lg text-primary font-medium">{member.title || 'Employee'}</p>
+              <h1 className="text-2xl font-bold text-foreground">{member.cv_full_name}</h1>
+              <p className="text-lg text-primary font-medium">{member.cv_profession || 'Employee'}</p>
               <div className="flex flex-wrap gap-4 mt-3 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <Mail className="h-4 w-4" />
-                  {member.email}
+                  {member.cv_email }
                 </span>
-                {/* 👇 UPDATED: Use dynamic department */}
-  <span className="flex items-center gap-1.5">
-    <Building2 className="h-4 w-4" />
-    {member.department || 'No Department'}
-  </span>
-                <span className="flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4" />
-                  {member.years_of_experience} years experience
-                </span>
+                 <span className="flex items-center gap-1.5">
+      <Phone className="h-4 w-4 text-primary" />
+      {member.cv_phone}
+    </span>
+    <span className="flex items-center gap-1.5">
+      <Hash className="h-4 w-4 text-primary" />
+      Fax: {member.cv_fax}
+    </span>
+    
+    <span className="flex items-center col-span-full gap-1.5">
+      <MapPin className="h-4 w-4 text-primary" />
+      {member.cv_address}
+    </span>
+                
               </div>
-              {member.summary && (
-                <p className="mt-4 text-muted-foreground">{member.summary}</p>
-              )}
+             
             </div>
           </div>
         </CardContent>
@@ -180,11 +189,11 @@ const MemberProfilePage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              {member.userSkills && member.userSkills.length > 0 ? (
-                member.userSkills.map((us, index) => (
-                  <Badge key={index} variant="secondary" className="text-sm">
-                    {us.skill.skill_name}
-                  </Badge>
+              {member.cv_skills && member.cv_skills.length > 0 ? (
+                member.cv_skills.map((skill, index) => (
+                  <Badge key={index} variant="secondary" className="text-sm bg-primary/5 text-primary border-primary/10">
+          {skill}
+        </Badge>
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground">No skills listed</p>

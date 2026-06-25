@@ -6,6 +6,7 @@ import { Certification } from '../certifications/entities/certification.entity';
 import { Cv } from '../cvs/entities/cv.entity';
 import { UserSkill } from 'src/skill/entities/user-skill.entity';
 import { Team } from 'src/users/entities/team.entity';
+import { Education } from 'src/education/entities/education.entity';
 export declare class EmployeesService {
     private userRepository;
     private projectRepository;
@@ -13,9 +14,10 @@ export declare class EmployeesService {
     private certificationRepository;
     private cvRepository;
     private userSkillRepository;
+    private educationRepository;
     private certRepository;
     private teamRepository;
-    constructor(userRepository: Repository<User>, projectRepository: Repository<Project>, trainingRepository: Repository<Training>, certificationRepository: Repository<Certification>, cvRepository: Repository<Cv>, userSkillRepository: Repository<UserSkill>, certRepository: Repository<Certification>, teamRepository: Repository<Team>);
+    constructor(userRepository: Repository<User>, projectRepository: Repository<Project>, trainingRepository: Repository<Training>, certificationRepository: Repository<Certification>, cvRepository: Repository<Cv>, userSkillRepository: Repository<UserSkill>, educationRepository: Repository<Education>, certRepository: Repository<Certification>, teamRepository: Repository<Team>);
     getDashboardData(userId: number): Promise<{
         title: string;
         yearsOfExperience: number;
@@ -37,20 +39,19 @@ export declare class EmployeesService {
     }>;
     getFullEmployeeCv(userId: number): Promise<{
         name: string;
-        title: string;
+        profession: string;
         email: string;
-        department: string;
-        summary: string;
-        skills: string[];
+        phone: string;
+        fax: string;
+        address: string;
+        skills: any[];
         projects: {
             id: number;
             name: string;
-            role: string;
             client: string;
             startDate: Date;
             endDate: Date;
             description: string;
-            technologies: string[];
         }[];
         certifications: {
             id: number;
@@ -66,11 +67,45 @@ export declare class EmployeesService {
             completionDate: string;
             duration: string;
         }[];
-        education: any[];
+        education: {
+            id: number;
+            degree: string;
+            field: string;
+            institution: string;
+            graduationYear: number;
+            startYear: number;
+        }[];
     }>;
     findAllEmployees(): Promise<User[]>;
     searchEmployees(query: string): Promise<User[]>;
-    findOne(id: number): Promise<User>;
+    findOne(id: number): Promise<{
+        cv_full_name: string;
+        cv_profession: string;
+        cv_phone: string;
+        cv_fax: string;
+        cv_address: string;
+        cv_skills: string[];
+        cv_email: string;
+        cv_last_updated: Date;
+        user_id: number;
+        email: string;
+        password_hash: string;
+        full_name: string;
+        active: boolean;
+        title: string;
+        department: string;
+        years_of_experience: number;
+        summary: string;
+        userSkills: UserSkill[];
+        score: number;
+        roles: import("../users/entities/role.entity").Role[];
+        created_at: Date;
+        updated_at: Date;
+        teams: Team[];
+        certifications: Certification[];
+        trainings: Training[];
+        projects: Project[];
+    }>;
     calculateDashboardStats(): Promise<{
         totalEmployees: number;
         totalCertifications: number;

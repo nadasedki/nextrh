@@ -23,14 +23,16 @@ const certification_entity_1 = require("../certifications/entities/certification
 const cv_entity_1 = require("../cvs/entities/cv.entity");
 const user_skill_entity_1 = require("../skill/entities/user-skill.entity");
 const team_entity_1 = require("../users/entities/team.entity");
+const education_entity_1 = require("../education/entities/education.entity");
 let EmployeesService = class EmployeesService {
-    constructor(userRepository, projectRepository, trainingRepository, certificationRepository, cvRepository, userSkillRepository, certRepository, teamRepository) {
+    constructor(userRepository, projectRepository, trainingRepository, certificationRepository, cvRepository, userSkillRepository, educationRepository, certRepository, teamRepository) {
         this.userRepository = userRepository;
         this.projectRepository = projectRepository;
         this.trainingRepository = trainingRepository;
         this.certificationRepository = certificationRepository;
         this.cvRepository = cvRepository;
         this.userSkillRepository = userSkillRepository;
+        this.educationRepository = educationRepository;
         this.certRepository = certRepository;
         this.teamRepository = teamRepository;
     }
@@ -75,31 +77,37 @@ let EmployeesService = class EmployeesService {
         });
         if (!user)
             throw new common_1.NotFoundException('User not found');
-        const [projects, trainings, certifications, userSkills] = await Promise.all([
+        const [projects, trainings, certifications, education, latestCv] = await Promise.all([
             this.projectRepository.find({ where: { user_id: userId } }),
             this.trainingRepository.find({ where: { user_id: userId } }),
             this.certificationRepository.find({ where: { userId: userId } }),
-            this.userSkillRepository.find({
+            this.educationRepository.find({ where: { user_id: userId } }),
+            this.cvRepository.findOne({
                 where: { user_id: userId },
-                relations: ['skill']
+                order: { last_updated: 'DESC' }
             }),
         ]);
+        let skillsList = [];
+        if (latestCv?.skills) {
+            skillsList = Array.isArray(latestCv.skills)
+                ? latestCv.skills
+                : String(latestCv.skills).split(',').map(s => s.trim());
+        }
         return {
-            name: user.full_name,
-            title: user.title,
-            email: user.email,
-            department: user.department || 'N/A',
-            summary: user.summary || '',
-            skills: userSkills.map(us => us.skill.skill_name),
+            name: latestCv?.full_name,
+            profession: latestCv?.profession || user.title || 'N/A',
+            email: latestCv?.email || user.email,
+            phone: latestCv?.phone || 'N/A',
+            fax: latestCv?.fax || 'N/A',
+            address: latestCv?.address || 'N/A',
+            skills: skillsList,
             projects: projects.map(p => ({
                 id: p.id,
                 name: p.name,
-                role: p.role,
                 client: p.client,
                 startDate: p.start_date,
                 endDate: p.end_date,
                 description: p.description,
-                technologies: p.technologies || []
             })),
             certifications: certifications.map(c => ({
                 id: c.certId,
@@ -115,13 +123,21 @@ let EmployeesService = class EmployeesService {
                 completionDate: t.completion_date,
                 duration: t.duration
             })),
-            education: [],
+            education: education.map(edu => ({
+                id: edu.education_id,
+                degree: edu.degree,
+                field: edu.field_of_study,
+                institution: edu.institution,
+                graduationYear: edu.end_year,
+                startYear: edu.start_year
+            }))
         };
     }
     async findAllEmployees() {
         return this.userRepository.find({
             relations: ['userSkills', 'userSkills.skill', 'certifications'],
-            where: { active: true }
+            where: { active: true },
+            order: { score: 'DESC' }
         });
     }
     async searchEmployees(query) {
@@ -137,8 +153,6 @@ let EmployeesService = class EmployeesService {
         const user = await this.userRepository.findOne({
             where: { user_id: id },
             relations: [
-                'userSkills',
-                'userSkills.skill',
                 'certifications',
                 'trainings',
                 'projects'
@@ -147,7 +161,21 @@ let EmployeesService = class EmployeesService {
         if (!user) {
             throw new common_1.NotFoundException(`Member not found`);
         }
-        return user;
+        const latestCv = await this.cvRepository.findOne({
+            where: { user_id: id },
+            order: { last_updated: 'DESC' },
+        });
+        return {
+            ...user,
+            cv_full_name: latestCv?.full_name,
+            cv_profession: latestCv?.profession || 'N/A',
+            cv_phone: latestCv?.phone || 'N/A',
+            cv_fax: latestCv?.fax || 'N/A',
+            cv_address: latestCv?.address || 'N/A',
+            cv_skills: latestCv?.skills || [],
+            cv_email: latestCv?.email || user.email,
+            cv_last_updated: latestCv?.last_updated || null,
+        };
     }
     async calculateDashboardStats() {
         const totalEmployees = await this.userRepository.count({ where: { active: true } });
@@ -192,9 +220,11 @@ exports.EmployeesService = EmployeesService = __decorate([
     __param(3, (0, typeorm_1.InjectRepository)(certification_entity_1.Certification)),
     __param(4, (0, typeorm_1.InjectRepository)(cv_entity_1.Cv)),
     __param(5, (0, typeorm_1.InjectRepository)(user_skill_entity_1.UserSkill)),
-    __param(6, (0, typeorm_1.InjectRepository)(certification_entity_1.Certification)),
-    __param(7, (0, typeorm_1.InjectRepository)(team_entity_1.Team)),
+    __param(6, (0, typeorm_1.InjectRepository)(education_entity_1.Education)),
+    __param(7, (0, typeorm_1.InjectRepository)(certification_entity_1.Certification)),
+    __param(8, (0, typeorm_1.InjectRepository)(team_entity_1.Team)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,

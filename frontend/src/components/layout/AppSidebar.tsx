@@ -117,7 +117,7 @@ export const AppSidebar: React.FC = () => {
             <FileText className="h-5 w-5" />
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold text-sidebar-foreground">CV Manager</span>
+            <span className="text-sm font-semibold text-sidebar-foreground">NEXTRH</span>
             <span className="text-xs text-sidebar-foreground/60">{getRoleLabel()}</span>
           </div>
         </div>

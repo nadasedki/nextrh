@@ -19,4 +19,13 @@ export declare class ExperienceController {
         startDate: Date;
         endDate: Date;
     }[]>;
+    update(id: number, req: any, updateDto: any): Promise<{
+        id: number;
+        company: string;
+        role: string;
+        description: string;
+        startDate: Date;
+        endDate: Date;
+    }>;
+    remove(id: number, req: any): Promise<import("./entities/experience.entity").Experience>;
 }

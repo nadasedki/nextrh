@@ -23,20 +23,19 @@ export declare class EmployeesController {
     }>;
     getMyCvData(req: any): Promise<{
         name: string;
-        title: string;
+        profession: string;
         email: string;
-        department: string;
-        summary: string;
-        skills: string[];
+        phone: string;
+        fax: string;
+        address: string;
+        skills: any[];
         projects: {
             id: number;
             name: string;
-            role: string;
             client: string;
             startDate: Date;
             endDate: Date;
             description: string;
-            technologies: string[];
         }[];
         certifications: {
             id: number;
@@ -52,7 +51,14 @@ export declare class EmployeesController {
             completionDate: string;
             duration: string;
         }[];
-        education: any[];
+        education: {
+            id: number;
+            degree: string;
+            field: string;
+            institution: string;
+            graduationYear: number;
+            startYear: number;
+        }[];
     }>;
     getAllEmployees(searchQuery?: string): Promise<import("../users/entities/user.entity").User[]>;
     getDashboardStats(): Promise<{
@@ -70,5 +76,32 @@ export declare class EmployeesController {
             value: number;
         }[];
     }>;
-    getEmployeeById(id: number): Promise<import("../users/entities/user.entity").User>;
+    getEmployeeById(id: number): Promise<{
+        cv_full_name: string;
+        cv_profession: string;
+        cv_phone: string;
+        cv_fax: string;
+        cv_address: string;
+        cv_skills: string[];
+        cv_email: string;
+        cv_last_updated: Date;
+        user_id: number;
+        email: string;
+        password_hash: string;
+        full_name: string;
+        active: boolean;
+        title: string;
+        department: string;
+        years_of_experience: number;
+        summary: string;
+        userSkills: import("../skill/entities/user-skill.entity").UserSkill[];
+        score: number;
+        roles: import("../users/entities/role.entity").Role[];
+        created_at: Date;
+        updated_at: Date;
+        teams: import("../users/entities/team.entity").Team[];
+        certifications: import("../certifications/entities/certification.entity").Certification[];
+        trainings: import("../training/entities/training.entity").Training[];
+        projects: import("../project/entities/project.entity").Project[];
+    }>;
 }

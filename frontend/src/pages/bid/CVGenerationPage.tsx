@@ -169,7 +169,7 @@ const CVGenerationPage: React.FC = () => {
                 </div>
                 <a 
                   href={downloadUrl} 
-                  download={`CV_Genere_${selectedEmployee}.pdf`}
+                  download={`CV_Genere_${selectedEmployee}.docx`}
                   className="flex items-center bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
                 >
                   <Download className="h-4 w-4 mr-2" />

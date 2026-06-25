@@ -16,10 +16,12 @@ exports.ParserController = void 0;
 const parser_service_1 = require("./parser.service");
 const common_1 = require("@nestjs/common");
 const ai_service_1 = require("./ai.service");
+const evaluation_metrics_service_1 = require("./evaluation-metrics.service");
 let ParserController = class ParserController {
-    constructor(parserService, AiService) {
+    constructor(parserService, AiService, metricsService) {
         this.parserService = parserService;
         this.AiService = AiService;
+        this.metricsService = metricsService;
     }
     async extractCertificate(body) {
         const { filePath } = body;
@@ -31,6 +33,14 @@ let ParserController = class ParserController {
             return { status: 'error', message: e.message };
         }
     }
+    async triggerBatchEvaluation() {
+        this.metricsService.runEvaluationAndSaveJson()
+            .catch(err => console.error("Evaluation Async Error:", err));
+        return {
+            success: true,
+            message: "Batch evaluation pipeline started. Checking files and generating metrics_report.json...",
+        };
+    }
 };
 exports.ParserController = ParserController;
 __decorate([
@@ -40,9 +50,17 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], ParserController.prototype, "extractCertificate", null);
+__decorate([
+    (0, common_1.Post)('evaluate'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], ParserController.prototype, "triggerBatchEvaluation", null);
 exports.ParserController = ParserController = __decorate([
     (0, common_1.Controller)('parser'),
+    __param(2, (0, common_1.Inject)(evaluation_metrics_service_1.EvaluationMetricsService)),
     __metadata("design:paramtypes", [parser_service_1.ParserService,
-        ai_service_1.AiService])
+        ai_service_1.AiService,
+        evaluation_metrics_service_1.EvaluationMetricsService])
 ], ParserController);
 //# sourceMappingURL=parser.controller.js.map

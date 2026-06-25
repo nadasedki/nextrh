@@ -14,41 +14,49 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RagController = void 0;
 const common_1 = require("@nestjs/common");
-const rag_service_1 = require("./rag.service");
-const vector_service_1 = require("./vector.service");
+const indexing_service_1 = require("./indexing/indexing.service");
+const rag_orchestrator_service_1 = require("./application/rag-orchestrator.service");
+const evaluation_service_1 = require("./evaluation/evaluation.service");
 let RagController = class RagController {
-    constructor(ragService, vectorService) {
-        this.ragService = ragService;
-        this.vectorService = vectorService;
+    constructor(ragOrchestrator, indexingService, evaluationService) {
+        this.ragOrchestrator = ragOrchestrator;
+        this.indexingService = indexingService;
+        this.evaluationService = evaluationService;
     }
-    async ask(question) {
-        const answer = await this.ragService.ask(question);
-        return { answer };
+    async ask(body) {
+        return this.ragOrchestrator.ask(body.question);
     }
-    async index() {
-        await this.vectorService.deleteCollection();
-        await this.ragService.ensureCollectionExists();
-        const chunkCount = await this.ragService.indexAllCVs();
-        return { status: 'success', chunksIndexed: chunkCount };
+    async indexAll() {
+        return this.indexingService.indexAllCVs();
+    }
+    async evaluate() {
+        return this.evaluationService.runEvaluationSuite();
     }
 };
 exports.RagController = RagController;
 __decorate([
     (0, common_1.Post)('ask'),
-    __param(0, (0, common_1.Body)('question')),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], RagController.prototype, "ask", null);
 __decorate([
-    (0, common_1.Post)('index'),
+    (0, common_1.Post)('index-all'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
-], RagController.prototype, "index", null);
+], RagController.prototype, "indexAll", null);
+__decorate([
+    (0, common_1.Post)('evaluate'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], RagController.prototype, "evaluate", null);
 exports.RagController = RagController = __decorate([
     (0, common_1.Controller)('rag'),
-    __metadata("design:paramtypes", [rag_service_1.RagService,
-        vector_service_1.VectorService])
+    __metadata("design:paramtypes", [rag_orchestrator_service_1.RagOrchestratorService,
+        indexing_service_1.IndexingService,
+        evaluation_service_1.EvaluationService])
 ], RagController);
 //# sourceMappingURL=rag.controller.js.map

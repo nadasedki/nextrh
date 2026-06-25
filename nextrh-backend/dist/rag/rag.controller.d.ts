@@ -1,14 +1,20 @@
-import { RagService } from './rag.service';
-import { VectorService } from './vector.service';
+import { IndexingService } from './indexing/indexing.service';
+import { RagOrchestratorService } from './application/rag-orchestrator.service';
+import { EvaluationService } from './evaluation/evaluation.service';
 export declare class RagController {
-    private ragService;
-    private vectorService;
-    constructor(ragService: RagService, vectorService: VectorService);
-    ask(question: string): Promise<{
+    private readonly ragOrchestrator;
+    private readonly indexingService;
+    private readonly evaluationService;
+    constructor(ragOrchestrator: RagOrchestratorService, indexingService: IndexingService, evaluationService: EvaluationService);
+    ask(body: {
+        question: string;
+    }): Promise<{
         answer: string;
+        sources: any[];
     }>;
-    index(): Promise<{
-        status: string;
-        chunksIndexed: number;
+    indexAll(): Promise<{
+        totalCVs: number;
+        totalPoints: number;
     }>;
+    evaluate(): Promise<any>;
 }

@@ -15,6 +15,7 @@ export declare class User {
     years_of_experience: number;
     summary: string;
     userSkills: UserSkill[];
+    score: number;
     roles: Role[];
     created_at: Date;
     updated_at: Date;

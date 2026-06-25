@@ -95,12 +95,16 @@ async previewTemplate(@UploadedFile() file: Express.Multer.File, @Res() res: Res
 async generatePdf(@Param('cvId') cvId: string, @UploadedFile() file: Express.Multer.File, @Res() res: Response) {
   const pdfBuffer = await this.generateService.processSmartPdf(+cvId, file);
 
-  res.set({
+  /*res.set({
     'Content-Type': 'application/pdf',
     'Content-Disposition': `attachment; filename=CV_Generated_${cvId}.pdf`,
     'Content-Length': pdfBuffer.length,
-  });
-
+  });*/
+res.set({
+  'Content-Type':
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'Content-Disposition': `attachment; filename=CV_Generated_${cvId}.docx`,
+});
   res.end(pdfBuffer);
 }
 }

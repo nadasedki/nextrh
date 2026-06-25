@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/common';
+import {Phone, MapPin, Hash, } from 'lucide-react';
 import {
   FileText,
   Download,
@@ -50,15 +51,19 @@ interface Training {
 interface Education {
   id: number;
   degree: string;
-  field: string;
+  field: string;      
   institution: string;
+  startYear: number;  
   graduationYear: number;
 }
 
 interface CvData {
-  name: string;
-  title: string;
+ name: string;
+  profession: string; 
   email: string;
+  phone: string;       
+  fax: string;         
+  address: string;    
   department: string;
   summary: string;
   skills: string[];
@@ -184,16 +189,32 @@ const formatEndDate = (dateString?: string | null) => {
           {/* Header Section */}
           <div className="text-center pb-6 border-b">
             <h1 className="text-3xl font-bold text-foreground mb-2">{cvData.name}</h1>
-            <p className="text-xl text-primary font-medium mb-4">{cvData.title}</p>
+            <p className="text-xl text-primary font-medium mb-4">{cvData.profession}</p>
             <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <Mail className="h-4 w-4" />
                 {cvData.email}
               </span>
-              <span className="flex items-center gap-1.5">
-                <Building2 className="h-4 w-4" />
-                {cvData.department}
-              </span>
+              {cvData.phone && cvData.phone !== 'N/A' && (
+      <span className="flex items-center gap-1.5">
+        <Phone className="h-4 w-4 text-primary" />
+        {cvData.phone}
+      </span>
+    )}
+
+    {cvData.fax && cvData.fax !== 'N/A' && (
+      <span className="flex items-center gap-1.5">
+        <Hash className="h-4 w-4 text-primary" />
+        Fax: {cvData.fax}
+      </span>
+    )}
+  </div>
+
+  <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+    <span className="flex items-center gap-1.5">
+      <MapPin className="h-4 w-4 text-primary" />
+      {cvData.address}
+    </span>
             </div>
           </div>
 
@@ -248,7 +269,7 @@ const formatEndDate = (dateString?: string | null) => {
                     </div>
                     <p className="mt-2 text-sm text-muted-foreground">{project.description}</p>
                     <div className="flex flex-wrap gap-1.5 mt-2">
-                      {project.technologies.map((tech) => (
+                      {(project.technologies || []).map((tech) => (
                         <Badge key={tech} variant="outline" className="text-xs">
                           {tech}
                         </Badge>
@@ -290,27 +311,38 @@ const formatEndDate = (dateString?: string | null) => {
             </section>
           )}
 
-          {/* Education Section */}
-          {cvData.education && cvData.education.length > 0 && (
-            <section>
-              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
-                <GraduationCap className="h-5 w-5 text-primary" />
-                Education
-              </h2>
-              <div className="space-y-4">
-                {cvData.education.map((edu) => (
-                  <div key={edu.id} className="flex items-start gap-3">
-                    <GraduationCap className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">{edu.degree} in {edu.field}</p>
-                      <p className="text-sm text-muted-foreground">{edu.institution}</p>
-                      <p className="text-xs text-muted-foreground">Graduated: {edu.graduationYear}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
+         {/* Education Section */}
+{cvData.education && cvData.education.length > 0 && (
+  <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
+      <GraduationCap className="h-5 w-5 text-primary" />
+      Education & Academic Background
+    </h2>
+    <div className="space-y-6">
+      {cvData.education.map((edu) => (
+        <div key={edu.id} className="relative pl-6 border-l-2 border-muted hover:border-primary/50 transition-colors">
+          {/* Petit point décoratif sur la ligne temporelle */}
+          <div className="absolute -left-[9px] top-1 h-4 w-4 rounded-full border-2 border-background bg-muted" />
+          
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+            <div>
+              <h3 className="font-bold text-foreground text-base">{edu.degree}</h3>
+              <p className="text-sm text-primary font-medium">{edu.field}</p>
+              <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
+                <Building2 className="h-3.5 w-3.5" />
+                {edu.institution}
+              </p>
+            </div>
+            <div className="text-sm font-semibold text-muted-foreground bg-muted/50 px-3 py-1 rounded-full h-fit flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5" />
+              {edu.startYear} — {edu.graduationYear}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+)}
 
           {/* Training Section */}
           {cvData.trainings.length > 0 && (

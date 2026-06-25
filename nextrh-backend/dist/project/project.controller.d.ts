@@ -14,4 +14,6 @@ export declare class ProjectsController {
         endDate: Date;
         technologies: string[];
     }[]>;
+    update(id: number, req: any, updateDto: any): Promise<any>;
+    remove(id: number, req: any): Promise<void>;
 }

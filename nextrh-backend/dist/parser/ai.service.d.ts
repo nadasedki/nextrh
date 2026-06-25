@@ -5,4 +5,5 @@ export declare class AiService {
     private readonly llmService;
     constructor(ParserService: ParserService, llmService: LlmService);
     extractCertificate(filePath: string): Promise<any>;
+    extractCertificate2(filePath: string): Promise<any>;
 }

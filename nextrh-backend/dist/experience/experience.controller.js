@@ -31,6 +31,14 @@ let ExperienceController = class ExperienceController {
         const userId = req.user.userId || req.user.id;
         return this.experienceService.findByUser(userId);
     }
+    async update(id, req, updateDto) {
+        const userId = req.user.userId || req.user.id;
+        return this.experienceService.update(id, userId, updateDto);
+    }
+    async remove(id, req) {
+        const userId = req.user.userId || req.user.id;
+        return this.experienceService.remove(id, userId);
+    }
 };
 exports.ExperienceController = ExperienceController;
 __decorate([
@@ -48,6 +56,23 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], ExperienceController.prototype, "findMyExperiences", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object, Object]),
+    __metadata("design:returntype", Promise)
+], ExperienceController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:returntype", Promise)
+], ExperienceController.prototype, "remove", null);
 exports.ExperienceController = ExperienceController = __decorate([
     (0, common_1.Controller)('experiences'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

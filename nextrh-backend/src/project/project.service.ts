@@ -4,14 +4,17 @@ import { Repository } from 'typeorm';
 import { Project } from './entities/project.entity'; // Adjust path
 import { CreateProjectDto } from './dto/create-project.dto'; // Adjust path
 import { Cv } from 'src/cvs/entities/cv.entity';
-
+import { NotFoundException } from '@nestjs/common';
+import { ScoringService } from 'src/scoring/scoring.service';
 @Injectable()
 export class ProjectService {
+ 
   constructor(
     @InjectRepository(Project)
     private projectRepository: Repository<Project>,
+    private readonly scoringService: ScoringService,
   ) {}
-// project.service.ts
+
 
 async create(userId: number, createDto: CreateProjectDto): Promise<any> {
   // 1. On sépare les champs du DTO qui ne correspondent pas à l'entité SQL
@@ -29,11 +32,13 @@ async create(userId: number, createDto: CreateProjectDto): Promise<any> {
   // 3. Sauvegarde dans la base de données
   const savedProject = await this.projectRepository.save(newProject);
 
-  // 4. IMPORTANT : On retourne l'objet mappé en camelCase pour que 
+   // MISE À JOUR DU SCORE ICI
+  await this.scoringService.calculateAndSaveScore(userId);
+  // 4. On retourne l'objet mappé en camelCase pour que 
   // le frontend (React) puisse l'afficher sans refresh
   return {
     ...savedProject,
-    startDate: savedProject.start_date, // On rajoute les clés attendues par le front
+    startDate: savedProject.start_date, 
     endDate: savedProject.end_date,
   };
 }
@@ -44,25 +49,21 @@ async create(userId: number, createDto: CreateProjectDto): Promise<any> {
       order: { start_date: 'DESC' },
     });
 
-    // Map database entity names to frontend camelCase expectations
+
     return projects.map((p) => ({
       id: p.id,
       name: p.name,
       client: p.client,
       role: p.role,
       description: p.description,
-      startDate: p.start_date, // Map snake_case to camelCase
-      endDate: p.end_date,     // Map snake_case to camelCase
+      startDate: p.start_date, 
+      endDate: p.end_date,     
       technologies: p.technologies || [],
     }));
   }
 
 
-  //
-  
-  /**
-   * Bulk creation from the Parser JSON output
-   */
+ 
   async createBulkFromParsedData(projectsData: any[], userId: number, cvEntity?: Cv) {
     if (!projectsData || projectsData.length === 0) return [];
 
@@ -71,14 +72,13 @@ async create(userId: number, createDto: CreateProjectDto): Promise<any> {
 
       return this.projectRepository.create({
         user_id: userId,
-        // Since 'name' is required in your entity, we use the client name
         name: proj.client || 'Projet Technique', 
         client: proj.client,
         description: proj.description,
         start_date: startDate,
         end_date: endDate,
-        role: proj.role || '', // Default value
-        technologies: proj.technologies || [], // Default empty array
+        role: proj.role || '', 
+        technologies: proj.technologies || [], 
         cv: cvEntity, 
       });
     });
@@ -113,4 +113,47 @@ async create(userId: number, createDto: CreateProjectDto): Promise<any> {
     };
   }
 
+
+  async update(id: number, userId: number, updateDto: any): Promise<any> {
+  // 1. Rechercher le projet et vérifier la propriété
+  const project = await this.projectRepository.findOne({
+    where: { id, user_id: userId },
+  });
+
+  if (!project) {
+    throw new NotFoundException('Project not found or unauthorized');
+  }
+
+  // 2. Extraire les dates pour le mapping
+  const { startDate, endDate, ...otherData } = updateDto;
+
+  // 3. Mettre à jour les champs
+  Object.assign(project, otherData);
+  if (startDate) project.start_date = new Date(startDate);
+  if (endDate) project.end_date = new Date(endDate);
+
+  // 4. Sauvegarder
+  const saved = await this.projectRepository.save(project);
+
+  // 5. Retourner au format Frontend (camelCase)
+  return {
+    ...saved,
+    startDate: saved.start_date,
+    endDate: saved.end_date,
+  };
+}
+
+async remove(id: number, userId: number) {
+  const project = await this.projectRepository.findOne({
+    where: { id, user_id: userId },
+  });
+
+  if (!project) {
+    throw new NotFoundException('Project not found or unauthorized');
+  }
+
+  await this.projectRepository.remove(project);
+   // MISE À JOUR DU SCORE ICI
+  await this.scoringService.calculateAndSaveScore(userId);
+}
 }

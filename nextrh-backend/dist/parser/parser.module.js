@@ -12,12 +12,13 @@ const parser_service_1 = require("./parser.service");
 const parser_controller_1 = require("./parser.controller");
 const ai_service_1 = require("./ai.service");
 const llm_service_1 = require("./llm.service");
+const evaluation_metrics_service_1 = require("./evaluation-metrics.service");
 let ParserModule = class ParserModule {
 };
 exports.ParserModule = ParserModule;
 exports.ParserModule = ParserModule = __decorate([
     (0, common_1.Module)({
-        providers: [parser_service_1.ParserService, ai_service_1.AiService, llm_service_1.LlmService],
+        providers: [parser_service_1.ParserService, ai_service_1.AiService, llm_service_1.LlmService, evaluation_metrics_service_1.EvaluationMetricsService],
         controllers: [parser_controller_1.ParserController],
         exports: [ai_service_1.AiService, parser_service_1.ParserService],
     })

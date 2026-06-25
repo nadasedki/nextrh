@@ -10,6 +10,7 @@ import { Certification } from '../certifications/entities/certification.entity';
 import { Cv } from '../cvs/entities/cv.entity';
 import { UserSkill } from 'src/skill/entities/user-skill.entity';
 import { Team } from 'src/users/entities/team.entity';
+import { Education } from 'src/education/entities/education.entity';
 
 @Injectable()
 export class EmployeesService {
@@ -26,7 +27,8 @@ export class EmployeesService {
     private cvRepository: Repository<Cv>,
     @InjectRepository(UserSkill)
     private userSkillRepository: Repository<UserSkill>,
-    
+     @InjectRepository(Education)
+    private educationRepository: Repository<Education>,
     
     @InjectRepository(Certification) private certRepository: Repository<Certification>,
     @InjectRepository(Team) private teamRepository: Repository<Team>,
@@ -39,41 +41,41 @@ export class EmployeesService {
       throw new NotFoundException('User not found');
     }
 
-    // 2. Fetch data from all sources in parallel
-    const [projects, trainings, certifications, latestCv] = await Promise.all([
-      this.projectRepository.find({ where: { user_id: userId } }),
-      this.trainingRepository.find({ where: { user_id: userId } }),
-      this.certificationRepository.find({ where: { userId: userId } }),
-      this.cvRepository.findOne({ 
-        where: { user_id: userId },
-        order: { last_updated: 'DESC' }
-      }),
-    ]);
+// 2. Fetch data from all sources in parallel
+const [projects, trainings, certifications, latestCv] = await Promise.all([
+  this.projectRepository.find({ where: { user_id: userId } }),
+  this.trainingRepository.find({ where: { user_id: userId } }),
+  this.certificationRepository.find({ where: { userId: userId } }),
+  this.cvRepository.findOne({ 
+    where: { user_id: userId },
+    order: { last_updated: 'DESC' }
+  }),
+]);
 
-    // 3. Format and combine data for the frontend
-    return {
-      title: user.title || 'No Title', // From updated DB column
-      yearsOfExperience: user.years_of_experience || 0, // From updated DB column
-      
-      certifications: certifications.map(c => ({
-        id: c.certId,
-        name: c.certName,
-        issuer: c.provider,
-        status: c.status // Assuming DB has 'active', 'expiring_soon', 'expired'
-      })),
-      
-      trainings: trainings.map(t => ({ 
-        id: t.training_id, 
-        name: t.training_name 
-      })),
-      
-      projects: projects.map(p => ({ 
-        id: p.id, 
-        name: p.name 
-      })),
-      
-      cvLastUpdated: latestCv ? latestCv.last_updated.toISOString().split('T')[0] : 'Never'
-    };
+// 3. Format and combine data for the frontend
+return {
+  title: user.title || 'No Title', // From updated DB column
+  yearsOfExperience: user.years_of_experience || 0, // From updated DB column
+  
+  certifications: certifications.map(c => ({
+    id: c.certId,
+    name: c.certName,
+    issuer: c.provider,
+    status: c.status //  DB has 'active', 'expiring_soon', 'expired'
+  })),
+  
+  trainings: trainings.map(t => ({ 
+    id: t.training_id, 
+    name: t.training_name 
+  })),
+  
+  projects: projects.map(p => ({ 
+    id: p.id, 
+    name: p.name 
+  })),
+  
+  cvLastUpdated: latestCv ? latestCv.last_updated.toISOString().split('T')[0] : 'Never'
+};
   }
   //
 
@@ -88,36 +90,43 @@ export class EmployeesService {
     if (!user) throw new NotFoundException('User not found');
 
     // 2. Fetch all related data in parallel
-    const [projects, trainings, certifications, userSkills] = await Promise.all([
+    const [projects, trainings, certifications,education,latestCv] = await Promise.all([
       this.projectRepository.find({ where: { user_id: userId } }),
       this.trainingRepository.find({ where: { user_id: userId } }),
       this.certificationRepository.find({ where: { userId: userId } }),
-      // Fetch skills and join with skills table to get names
-      this.userSkillRepository.find({ 
+      this.educationRepository.find({ where: { user_id: userId } }),
+      this.cvRepository.findOne({
         where: { user_id: userId },
-        relations: ['skill'] // Assumes UserSkill entity has @ManyToOne to Skill
+        order: { last_updated: 'DESC' }
       }),
+      
     ]);
-
+ //  Traitement des SKILLS (on s'assure que c'est un tableau)
+    let skillsList = [];
+    if (latestCv?.skills) {
+      skillsList = Array.isArray(latestCv.skills) 
+        ? latestCv.skills 
+        : String(latestCv.skills).split(',').map(s => s.trim());
+    }
+ 
     // 3. Assemble and Format for Frontend
     return {
-      name: user.full_name,
-      title: user.title,
-      email: user.email,
-      department: user.department || 'N/A',
-      summary: user.summary || '', // You might need to add this column to users table
-      
-      skills: userSkills.map(us => us.skill.skill_name),
-      
+      name: latestCv?.full_name ,
+      profession: latestCv?.profession || user.title || 'N/A',
+      email: latestCv?.email || user.email,
+      phone: latestCv?.phone || 'N/A',
+      fax: latestCv?.fax || 'N/A',
+      address: latestCv?.address || 'N/A',
+      skills: skillsList, 
       projects: projects.map(p => ({
         id: p.id,
         name: p.name,
-        role: p.role, // Add column to projects table
+       // role: p.role, // Add column to projects table
         client: p.client, // Add column to projects table
         startDate: p.start_date,
         endDate: p.end_date,
         description: p.description,
-        technologies: p.technologies || [] // PostgreSQL text[] array
+        //technologies: p.technologies || [] // PostgreSQL text[] array
       })),
       
       certifications: certifications.map(c => ({
@@ -136,14 +145,22 @@ export class EmployeesService {
         duration: t.duration // Add column to training_sessions table
       })),
       
-      education: [], // Map from an education table if you have one
+       education: education.map(edu => ({
+        id: edu.education_id,
+        degree: edu.degree,
+        field: edu.field_of_study,
+        institution: edu.institution,
+        graduationYear: edu.end_year, 
+        startYear: edu.start_year
+      }))
     };
   }
   async findAllEmployees() {
     return this.userRepository.find({
         // Include skills and certifications in the response
         relations: ['userSkills', 'userSkills.skill', 'certifications'],
-        where: { active: true } // Assuming you have an active flag
+        where: { active: true }, // Assuming you have an active flag
+        order: { score: 'DESC' } 
     });
   }
   async searchEmployees(query: string) {
@@ -162,8 +179,6 @@ export class EmployeesService {
   const user = await this.userRepository.findOne({
     where: { user_id: id },
     relations: [
-      'userSkills', 
-      'userSkills.skill', 
       'certifications',
       'trainings',  
       'projects'    
@@ -173,7 +188,22 @@ export class EmployeesService {
   if (!user) {
     throw new NotFoundException(`Member not found`);
   }
-  return user;
+   const latestCv = await this.cvRepository.findOne({
+    where: { user_id: id },
+    order: { last_updated: 'DESC' },
+  });
+  return {
+    ...user,
+    // On injecte les colonnes spécifiques du CV si elles existent
+    cv_full_name: latestCv?.full_name ,
+    cv_profession: latestCv?.profession || 'N/A',
+    cv_phone: latestCv?.phone || 'N/A',
+    cv_fax: latestCv?.fax || 'N/A',
+    cv_address: latestCv?.address || 'N/A',
+    cv_skills: latestCv?.skills || [], 
+    cv_email: latestCv?.email || user.email,
+    cv_last_updated: latestCv?.last_updated || null,
+  };
 }
 async calculateDashboardStats() {
     // 1. Total Employees

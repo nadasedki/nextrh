@@ -1,0 +1,178 @@
+[
+  {
+    "fileName": "cvs/CV EYA BEN JEMAA.pdf",
+    "expected": {
+      "profile": {
+        "name": "Aya BEN JEMAA",
+        "profession": "Ingénieur Réseaux Informatiques et Télécommunications",
+        "phone": "+216 98 772 817",
+        "fax": "+216 71 844 025",
+        "email": "a.benjemaa@nextstep-it.com",
+        "address": "31, Rue 1er Juin, Mutuelle-ville, 1082, Tunis",
+        "skills": [
+          "LAN",
+          "WLAN",
+          "WAN",
+          "Ethernet",
+          "EIGRP",
+          "OSPF",
+          "RIP",
+          "Firewall",
+          "UTM",
+          "Web Application Firewall",
+          "Solution antivirale",
+          "Supervision",
+          "Monitoring",
+          "GSM",
+          "GPRS",
+          "UMTS",
+          "LTE",
+          "Linux",
+          "Windows",
+          "Android",
+          "Java",
+          "J2EE",
+          "SQL",
+          "PHP",
+          "Cisco",
+          "HP",
+          "Alcatel-Lucent",
+          "Alcatel",
+          "Lucent",
+          "Sophos",
+          "Solarwinds",
+          "KEMP"
+        ]
+      },
+      "experience": [
+        {
+          "period": "Depuis Juin 2016",
+          "company": "Next Step IT",
+          "role": " Ingénieur Avant-vente Réseaux et Sécurité  Consultant Réseaux et Sécurité"
+        },
+        {
+          "period": "Janvier 2015 – Mai 2016",
+          "company": "Groupe El Kateb",
+          "role": "Ingénieur Réseaux et Sécurité"
+        }
+      ],
+      "certifications": [
+        {
+          "certName": "Barracuda Load Balancer  ADC Certified Enginee r",
+          "date": "Février 2019"
+        },
+        {
+          "certName": "Cisco Certified Design Professional (CCDP)",
+          "date": "Mai 2018"
+        },
+        {
+          "certName": "Cisco Certified Design Associate (CCDA)",
+          "date": "Mai 2018"
+        },
+        {
+          "certName": "KEMP Certified Engineer",
+          "date": "Juillet 2017"
+        },
+        {
+          "certName": "KEMP Certified Salesperson",
+          "date": "Mars 2017"
+        },
+        {
+          "certName": "ACFE Alcatel OmniSwitch LAN R6/R7/R8",
+          "date": "Mars 2016"
+        },
+        {
+          "certName": "ACPS Alcatel Unified Access",
+          "date": "Octobre 2015"
+        },
+        {
+          "certName": "ACSR Network Unified Access",
+          "date": "Septembre 2015"
+        },
+        {
+          "certName": "HP ATP-Flex Network Solutions",
+          "date": "Juin 2015"
+        },
+        {
+          "certName": "Cisco Certified Network Professional Routing & Switching (300-135) Troubleshooting",
+          "date": "Mai 2015"
+        },
+        {
+          "certName": "Cisco Certified Network Professional Routing & Switching (300-101) Routing",
+          "date": "Mai 2015"
+        },
+        {
+          "certName": "Cisco Certified Network Professional Routing & Switching (300-115) Switching",
+          "date": "Mai 2015"
+        },
+        {
+          "certName": "Cisco Certified Network Associate Routing & Switching (200-120) ICND1–ICND2",
+          "date": "Mars 2015"
+        },
+        {
+          "certName": "Implementing Cisco IOS Network Security (640-554)",
+          "date": "Mars 2015"
+        }
+      ],
+      "education": [
+        {
+          "year": "2011- 2014",
+          "institution": "Institut National des Sciences Appliquées et de Technologie « INSAT », Tunis",
+          "degree": "Diplôme National d’Ingénieur en Sciences Appliquées et en Technologie Spécialité : Réseaux informatiques et télécommunications"
+        },
+        {
+          "year": "2009 – 2011",
+          "institution": "Institut National des Sciences Appliquées et de Technologie « INSAT », Tunis",
+          "degree": "Classes préparatoires au concours d’ingénieur Spécialité : Maths, physiques, informatique"
+        }
+      ],
+      "projects": [
+        {
+          "year": "Mars 2019",
+          "client": "STEG",
+          "description": "Mise en place de la solution Cisco Application Centric Infrastructure (Cisco ACI) au sein de Datacenter de la STEG"
+        },
+        {
+          "year": "Avril 2018 – Février 2019",
+          "client": "Mezzo Tunis",
+          "description": "Réalisation d’une mission d’infogérance au sein de Mezzo en tant qu’Administrateur Réseau et Sécurité"
+        },
+        {
+          "year": "Mars 2018",
+          "client": "Cité de la Culture de Tunis",
+          "description": "Mise en place du réseau LAN et Wifi de la Cité de la Culture"
+        },
+        {
+          "year": "Février 2018",
+          "client": "Clinique Cardio- Vasculaire",
+          "description": "Mise en place de l’infrastructure réseau WLAN de la clinique"
+        },
+        {
+          "year": "Décembre 2017",
+          "client": "Tunisie Télécom",
+          "description": "Mise en place de la solution de gestion de vulnérabilité au sein de Tunisie Télécom"
+        },
+        {
+          "year": "Juillet 2017",
+          "client": "CNSS",
+          "description": "Mise en place de la solution Cisco au sein de Datacenter"
+        },
+        {
+          "year": "Mai 2017",
+          "client": "Bourse Tunisie",
+          "description": "Mise en place de la solution de monitoring pour l’infrastructure réseau et système de la Bourse"
+        },
+        {
+          "year": "Mars 2017",
+          "client": "Université Centrale",
+          "description": "Mise en place de la solution wifi au sein de l’université Centrale"
+        },
+        {
+          "year": "Décembre 2016",
+          "client": "Groupe Judy",
+          "description": "Réalisation d’une mission d’audit au sein du Groupe Judy"
+        }
+      ]
+    }
+  }
+]

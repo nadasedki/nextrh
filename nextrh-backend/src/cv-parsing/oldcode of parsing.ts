@@ -8,7 +8,7 @@ import { HeuristicParserService } from './heuristic-parser/heuristic-parser.serv
 import { LlmService } from 'src/cv-parsing/llm/llm.service';
 import { CvService } from 'src/cvs/cv.service';
 import { EducationService } from 'src/education/education.service';
-import { CertificationsService } from 'src/certifications/certifications.service';
+import { CertificationsService } from 'src/certifications/services/certifications.service';
 import { ProjectService } from 'src/project/project.service';
 import { ExperienceService } from 'src/experience/experience.service';
 @Injectable()

@@ -19,11 +19,13 @@ const user_entity_1 = require("./entities/user.entity");
 const role_entity_1 = require("./entities/role.entity");
 const team_entity_1 = require("./entities/team.entity");
 const typeorm_2 = require("@nestjs/typeorm");
+const experience_entity_1 = require("../experience/entities/experience.entity");
 let UsersService = class UsersService {
-    constructor(userRepo, roleRepo, teamRepo) {
+    constructor(userRepo, roleRepo, teamRepo, experienceRepo) {
         this.userRepo = userRepo;
         this.roleRepo = roleRepo;
         this.teamRepo = teamRepo;
+        this.experienceRepo = experienceRepo;
     }
     async create(dto) {
         const roles = await this.roleRepo.findByIds(dto.role_ids);
@@ -82,6 +84,27 @@ let UsersService = class UsersService {
         user.password_hash = hashedPassword;
         return this.userRepo.save(user);
     }
+    async updateProfileFromCv(userId, fullName, title) {
+        const user = await this.userRepo.findOne({
+            where: { user_id: userId },
+        });
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        if (fullName) {
+            user.full_name = fullName;
+        }
+        if (title) {
+            user.title = title;
+        }
+        return this.userRepo.save(user);
+    }
+    async updateYearsOfExperience(userId, years) {
+        await this.userRepo.update(userId, {
+            years_of_experience: years,
+        });
+        return years;
+    }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
@@ -89,7 +112,9 @@ exports.UsersService = UsersService = __decorate([
     __param(0, (0, typeorm_2.InjectRepository)(user_entity_1.User)),
     __param(1, (0, typeorm_2.InjectRepository)(role_entity_1.Role)),
     __param(2, (0, typeorm_2.InjectRepository)(team_entity_1.Team)),
+    __param(3, (0, typeorm_2.InjectRepository)(experience_entity_1.Experience)),
     __metadata("design:paramtypes", [typeorm_1.Repository,
+        typeorm_1.Repository,
         typeorm_1.Repository,
         typeorm_1.Repository])
 ], UsersService);

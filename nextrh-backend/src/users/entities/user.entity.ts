@@ -33,6 +33,9 @@ export class User {
   @OneToMany(() => UserSkill, (userSkill) => userSkill.user)
   userSkills: UserSkill[];
 
+@Column({ default: 0 })
+  score: number;
+    
   @ManyToMany(() => Role)
   @JoinTable({
     name: 'user_roles',

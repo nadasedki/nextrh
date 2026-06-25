@@ -14,11 +14,13 @@ import { Project } from 'src/project/entities/project.entity';
 import { ProjectModule } from 'src/project/project.module';
 import { ExperienceModule } from 'src/experience/experience.module';
 import { Experience } from 'src/experience/entities/experience.entity';
+import { UsersModule } from 'src/users/users.module';
+import { ScoringModule } from 'src/scoring/scoring.module';
 @Module({
 
   imports: [TypeOrmModule.forFeature([Cv]),CvModule,EducationModule,TypeOrmModule.forFeature([Education]),
   CertificationsModule,ProjectModule,TypeOrmModule.forFeature([Project]),
-  ExperienceModule,TypeOrmModule.forFeature([Experience])],
+  ExperienceModule,TypeOrmModule.forFeature([Experience]),UsersModule,ScoringModule],
   providers: [CvParsingService, PdfExtractorService, HeuristicParserService, LlmService],
   controllers: [CvParsingController]
 })

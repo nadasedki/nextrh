@@ -20,48 +20,84 @@ let CvService = class CvService {
     constructor(dataSource) {
         this.dataSource = dataSource;
     }
+    async getAllCVs() {
+        return await this.dataSource.query(`
+      SELECT 
+        cv_id,
+        user_id,
+        full_name,
+        profession,
+        email,
+        phone,
+        fax,
+        address,
+        skills
+      FROM public.cvs
+    `);
+    }
+    async getAllCertifications() {
+        return await this.dataSource.query(`
+      SELECT * FROM public.certifications
+    `);
+    }
+    async getEducationByCvId(cvId) {
+        return await this.dataSource.query(`SELECT * FROM public.education WHERE "cvCvId" = $1`, [cvId]);
+    }
+    async getProjectsByCvId(cvId) {
+        return await this.dataSource.query(`SELECT * FROM public.projects WHERE "cvCvId" = $1`, [cvId]);
+    }
+    async getExperiencesByCvId(cvId) {
+        return await this.dataSource.query(`SELECT * FROM public.experiences WHERE "cvCvId" = $1`, [cvId]);
+    }
     async getAllUnifiedProfiles() {
+        const cvs = await this.getAllCVs();
+        const certs = await this.getAllCertifications();
+        const profiles = [];
+        for (const cv of cvs) {
+            const identityKey = (cv.full_name || '').toLowerCase();
+            const profileCerts = certs.filter(c => (c.certificate_holder || '').toLowerCase() === identityKey);
+            const education = await this.getEducationByCvId(cv.cv_id);
+            const projects = await this.getProjectsByCvId(cv.cv_id);
+            const experiences = await this.getExperiencesByCvId(cv.cv_id);
+            profiles.push({
+                ...cv,
+                identity_key: identityKey,
+                certifications: profileCerts,
+                education,
+                projects,
+                experiences,
+            });
+        }
+        return profiles;
+    }
+    async getAllNames() {
+        const result = await this.dataSource.query(`
+      SELECT DISTINCT full_name FROM public.cvs WHERE full_name IS NOT NULL
+    `);
+        return result.map(r => r.full_name);
+    }
+    async getCertificationsByCvId(cvId) {
         try {
-            const profiles = await this.dataSource.query(`
-        SELECT 
-          c.cv_id,
-          c.user_id,
-          u.full_name,
-          u.title AS profession,
-          u.summary,
-          u.years_of_experience,
-          u.department
-        FROM public.cvs c
-        INNER JOIN public.users u ON c.user_id = u.user_id
-      `);
-            for (const profile of profiles) {
-                const [certs, edus, projs, exps] = await Promise.all([
-                    this.dataSource.query('SELECT * FROM public.certifications WHERE user_id = $1', [profile.user_id]),
-                    this.dataSource.query('SELECT * FROM public.education WHERE "cvCvId" = $1', [profile.cv_id]),
-                    this.dataSource.query('SELECT * FROM public.projects WHERE user_id = $1', [profile.user_id]),
-                    this.dataSource.query('SELECT * FROM public.experiences WHERE user_id = $1', [profile.user_id]),
-                ]);
-                profile.certifications = certs;
-                profile.education = edus;
-                profile.projects = projs;
-                profile.experiences = exps;
-            }
-            return profiles;
+            const result = await this.dataSource.query(`
+      SELECT *
+      FROM public.certifications
+      WHERE "cvCvId" = $1
+      `, [cvId]);
+            return result;
         }
         catch (err) {
-            console.error('Erreur SQL extraction profils:', err.message);
+            console.error('Erreur SQL certifications by holder:', err.message);
             return [];
         }
     }
-    async getAllNames() {
-        try {
-            const result = await this.dataSource.query('SELECT DISTINCT full_name FROM public.users WHERE full_name IS NOT NULL');
-            return result.map(r => r.full_name);
-        }
-        catch (err) {
-            console.error('Erreur SQL lors de la récupération des noms:', err.message);
-            return [];
-        }
+    async getCertificationWithCvContext(certId) {
+        const [result] = await this.dataSource.query(`
+    SELECT c.*, cv.full_name, cv.profession, cv.cv_id
+    FROM certifications c
+    JOIN cvs cv ON c."cvCvId" = cv.cv_id
+    WHERE c.cert_id = $1
+  `, [certId]);
+        return result;
     }
 };
 exports.CvService = CvService;

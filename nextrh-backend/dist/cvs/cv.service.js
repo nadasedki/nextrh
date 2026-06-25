@@ -30,13 +30,13 @@ let CvService = class CvService {
             file_path: filePath,
             format: 'pdf',
             generated: true,
-            full_name: cvJson.contact?.name,
-            profession: cvJson.contact?.profession,
-            email: cvJson.contact?.email,
-            phone: cvJson.contact?.phone,
-            fax: cvJson.contact?.fax,
-            address: cvJson.contact?.address,
-            skills: cvJson.skills || [],
+            full_name: cvJson.profile?.name,
+            profession: cvJson.profile?.profession,
+            email: cvJson.profile?.email,
+            phone: cvJson.profile?.phone,
+            fax: cvJson.profile?.fax,
+            address: cvJson.profile?.address,
+            skills: cvJson.profile.skills || [],
         });
         return await this.cvRepository.save(cv);
     }

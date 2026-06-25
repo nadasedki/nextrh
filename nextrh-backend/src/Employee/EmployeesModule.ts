@@ -11,6 +11,7 @@ import { Certification } from '../certifications/entities/certification.entity';
 import { Cv } from '../cvs/entities/cv.entity';
 import { UserSkill } from 'src/skill/entities/user-skill.entity';
 import { Team } from 'src/users/entities/team.entity';
+import { Education } from 'src/education/entities/education.entity';
 
 // If you have a shared AuthModule, import it here for guards
 // import { AuthModule } from '../auth/auth.module';
@@ -24,7 +25,7 @@ import { Team } from 'src/users/entities/team.entity';
       Certification,
       Cv,
       UserSkill,
-      Team
+      Team,Education
     ]),
     // AuthModule, // Import if you need shared authentication logic
   ],

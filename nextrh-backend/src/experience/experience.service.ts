@@ -13,9 +13,7 @@ export class ExperienceService {
     private readonly experienceRepo: Repository<Experience>,
   ) {}
 
-  /**
-   * Bulk creation from the Parser JSON output
-   */
+
   async createBulkFromParsedData(expData: any[], userId: number, cvEntity?: Cv) {
     if (!expData || expData.length === 0) return [];
 
@@ -76,9 +74,7 @@ export class ExperienceService {
     return { startDate, endDate };
   }
 
-// experience.service.ts
 
-// experience.service.ts
 
 async create(data: any) {
   // 1. Extraction des dates pour le mapping
@@ -119,5 +115,79 @@ async create(data: any) {
       startDate: e.start_date,
       endDate: e.end_date,
     }));
+}
+
+// src/experience/experience.service.ts
+
+async update(id: number, userId: number, data: any) {
+  // 1. Vérifier si l'expérience existe et appartient à l'utilisateur
+  const exp = await this.experienceRepo.findOne({ 
+    where: { id, user_id: userId } 
+  });
+
+  if (!exp) {
+    throw new Error('Experience not found or unauthorized');
+  }
+
+  // 2. Extraction et conversion des dates
+  const { startDate, endDate, ...rest } = data;
+
+  // 3. Mise à jour de l'objet
+  Object.assign(exp, rest);
+  if (startDate) exp.start_date = new Date(startDate);
+  if (endDate) exp.end_date = new Date(endDate);
+
+  // 4. Sauvegarde
+  const saved = await this.experienceRepo.save(exp);
+
+  // 5. Retour au format Frontend
+  return {
+    id: saved.id,
+    company: saved.company,
+    role: saved.role,
+    description: saved.description,
+    startDate: saved.start_date,
+    endDate: saved.end_date,
+  };
+}
+
+async remove(id: number, userId: number) {
+  const exp = await this.experienceRepo.findOne({ 
+    where: { id, user_id: userId } 
+  });
+
+  if (!exp) {
+    throw new Error('Experience not found or unauthorized');
+  }
+
+  return await this.experienceRepo.remove(exp);
+}
+
+async calculateTotalExperience(userId: number) {
+  const experiences = await this.experienceRepo.find({
+    where: { user_id: userId },
+  });
+
+  let totalMonths = 0;
+  const now = new Date();
+
+  for (const exp of experiences) {
+    if (!exp.start_date) continue;
+
+    const start = new Date(exp.start_date);
+    const end = exp.end_date ? new Date(exp.end_date) : now;
+
+    let months =
+      (end.getFullYear() - start.getFullYear()) * 12 +
+      (end.getMonth() - start.getMonth());
+
+    if (end.getDate() < start.getDate()) {
+      months -= 1;
+    }
+
+    totalMonths += Math.max(0, months);
+  }
+
+  return Math.floor(totalMonths / 12);
 }
 }

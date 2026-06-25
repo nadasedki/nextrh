@@ -19,9 +19,26 @@ let AiService = class AiService {
         this.llmService = llmService;
     }
     async extractCertificate(filePath) {
-        const text = await this.ParserService.extractTextFromPdf(filePath);
+        const { text, confidence } = await this.ParserService.extractTextFromPdf(filePath);
         const data = await this.llmService.extractCertificate(text);
+        if (data && !data.error) {
+            data.date_of_obtention = this.ParserService.formatDateToISO(data.date_of_obtention) || data.date_of_obtention;
+            data.date_of_expiration = this.ParserService.formatDateToISO(data.date_of_expiration);
+        }
         return data;
+    }
+    async extractCertificate2(filePath) {
+        const { text, confidence } = await this.ParserService.extractTextFromPdf(filePath);
+        const data = await this.llmService.extractCertificate(text);
+        if (data && !data.error) {
+            data.date_of_obtention = this.ParserService.formatDateToISO(data.date_of_obtention) || data.date_of_obtention;
+            data.date_of_expiration = this.ParserService.formatDateToISO(data.date_of_expiration);
+        }
+        return {
+            ...data,
+            ocrText: text,
+            ocrConfidence: confidence,
+        };
     }
 };
 exports.AiService = AiService;

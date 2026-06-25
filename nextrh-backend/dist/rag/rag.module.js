@@ -8,20 +8,42 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RagModule = void 0;
 const common_1 = require("@nestjs/common");
-const rag_service_1 = require("./rag.service");
 const rag_controller_1 = require("./rag.controller");
-const embedding_service_1 = require("./embedding.service");
-const vector_service_1 = require("./vector.service");
+const embedding_service_1 = require("./embedding/embedding.service");
+const vector_service_1 = require("./vector/vector.service");
+const chunking_service_1 = require("./chunking/chunking.service");
+const prompt_service_1 = require("./prompting/prompt.service");
+const llm_service_1 = require("./llm/llm.service");
+const retrieval_service_1 = require("./retrieval/retrieval.service");
+const reranking_service_1 = require("./reranking/reranking.service");
 const cv_service_1 = require("./cv.service");
-const evaluation_module_1 = require("../modules/evaluation/evaluation.module");
+const rag_pipeline_service_1 = require("./application/rag-pipeline.service");
+const rag_orchestrator_service_1 = require("./application/rag-orchestrator.service");
+const indexing_service_1 = require("./indexing/indexing.service");
+const rag_service_1 = require("./rag.service");
+const evaluation_service_1 = require("./evaluation/evaluation.service");
 let RagModule = class RagModule {
 };
 exports.RagModule = RagModule;
 exports.RagModule = RagModule = __decorate([
     (0, common_1.Module)({
-        imports: [evaluation_module_1.EvaluationModule],
-        providers: [rag_service_1.RagService, embedding_service_1.EmbeddingService, vector_service_1.VectorService, cv_service_1.CvService],
         controllers: [rag_controller_1.RagController],
+        providers: [
+            embedding_service_1.EmbeddingService,
+            vector_service_1.VectorService,
+            chunking_service_1.ChunkingService,
+            prompt_service_1.PromptService,
+            llm_service_1.LlmService,
+            retrieval_service_1.RetrievalService,
+            reranking_service_1.RerankingService,
+            cv_service_1.CvService,
+            rag_pipeline_service_1.RagPipelineService,
+            rag_orchestrator_service_1.RagOrchestratorService,
+            indexing_service_1.IndexingService,
+            rag_service_1.RagService,
+            evaluation_service_1.EvaluationService,
+        ],
+        exports: [rag_service_1.RagService],
     })
 ], RagModule);
 //# sourceMappingURL=rag.module.js.map

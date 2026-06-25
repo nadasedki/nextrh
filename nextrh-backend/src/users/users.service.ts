@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { RegisterDto } from 'src/auth/dto/register.dto';
+import { Experience } from 'src/experience/entities/experience.entity';
 
 @Injectable()
 export class UsersService {
@@ -15,6 +16,8 @@ export class UsersService {
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(Role) private roleRepo: Repository<Role>,
     @InjectRepository(Team) private teamRepo: Repository<Team>,
+    @InjectRepository(Experience)
+private experienceRepo: Repository<Experience>
   ) {}
 
 async create(dto: RegisterDto) {
@@ -83,4 +86,34 @@ async findTeamMembers(team_leader_id: number) {
   return this.userRepo.save(user);
 }
 
+async updateProfileFromCv(
+  userId: number,
+  fullName?: string,
+  title?: string,
+) {
+  const user = await this.userRepo.findOne({
+    where: { user_id: userId },
+  });
+
+  if (!user) {
+    throw new NotFoundException('User not found');
+  }
+
+  if (fullName) {
+    user.full_name = fullName;
+  }
+
+  if (title) {
+    user.title = title;
+  }
+
+  return this.userRepo.save(user);
+}
+async updateYearsOfExperience(userId: number, years: number) {
+  await this.userRepo.update(userId, {
+    years_of_experience: years,
+  });
+
+  return years;
+}
 }

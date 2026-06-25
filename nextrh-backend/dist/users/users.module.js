@@ -14,13 +14,16 @@ const role_entity_1 = require("./entities/role.entity");
 const users_service_1 = require("./users.service");
 const users_controller_1 = require("./users.controller");
 const teams_module_1 = require("../teams/teams.module");
+const experience_module_1 = require("../experience/experience.module");
+const experience_entity_1 = require("../experience/entities/experience.entity");
 let UsersModule = class UsersModule {
 };
 exports.UsersModule = UsersModule;
 exports.UsersModule = UsersModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, role_entity_1.Role]),
+        imports: [typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, role_entity_1.Role, experience_entity_1.Experience]),
             (0, common_1.forwardRef)(() => teams_module_1.TeamsModule),
+            experience_module_1.ExperienceModule,
         ],
         providers: [users_service_1.UsersService],
         controllers: [users_controller_1.UsersController],

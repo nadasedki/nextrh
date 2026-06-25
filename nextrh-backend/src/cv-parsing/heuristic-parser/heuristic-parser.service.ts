@@ -154,7 +154,11 @@ export class HeuristicParserService {
       const datePos = matches[i].index || 0;
       let certName = content.substring(lastIndex, datePos).trim();
       certName = certName.replace(/^(Certificat|Date d’obtention)\s+/gi, '').replace(/^[:\s\-\–\d\.\*•]+/, '').trim();
-      if (certName.length > 2) certs.push({ certName, date: dateStr });
+      if (certName.length > 2) 
+        certs.push({
+            certName: certName,
+            provider: this.inferProvider(certName),      
+            issueDate: this.parseFrenchDate(dateStr), });
       lastIndex = datePos + dateStr.length;
     }
   } else {
@@ -188,8 +192,9 @@ export class HeuristicParserService {
 
       if (cleanLine.length > 5) {
         certs.push({ 
-          certName: cleanLine, 
-          date: "Date non spécifiée" 
+            certName: cleanLine, 
+            provider: this.inferProvider(cleanLine),
+            issueDate: "Date non spécifiée" 
         });
       }
     }
@@ -197,6 +202,41 @@ export class HeuristicParserService {
 
   return certs;
 }
+//
+  private parseFrenchDate(dateStr: string): Date | null {
+    if (!dateStr || dateStr.toLowerCase().includes('non spécifiée')) return null;
+
+    const months: Record<string, number> = {
+      janvier: 0, février: 1, mars: 2, avril: 3, mai: 4, juin: 5,
+      juillet: 6, août: 7, septembre: 8, octobre: 9, novembre: 10, décembre: 11,
+    };
+
+    const parts = dateStr.toLowerCase().split(/\s+/); // ["février", "2020"]
+    const year = parts.find((p) => /\d{4}/.test(p));
+    const monthName = parts.find((p) => months[p] !== undefined);
+
+    if (year) {
+      const m = monthName ? months[monthName] : 0;
+      return new Date(parseInt(year), m, 1);
+    }
+    return null;
+  }
+
+  /**
+   * Helper: Guesses the provider based on common certification names
+   */
+  private inferProvider(certName: string): string {
+    const name = certName.toLowerCase();
+    if (name.includes('cisco') || name.includes('ccna') || name.includes('ccnp')) return 'Cisco';
+    if (name.includes('fortinet') || name.includes('nse')) return 'Fortinet';
+    if (name.includes('microsoft') || name.includes('azure') || name.includes('mcsa')) return 'Microsoft';
+    if (name.includes('aws') || name.includes('amazon')) return 'AWS';
+    if (name.includes('dell')) return 'DELL';
+    if (name.includes('hp')) return 'HP';
+    return 'Professional Issuer';
+  }
+
+//
    extractEducation(section: string) {
   if (!section) return [];
 

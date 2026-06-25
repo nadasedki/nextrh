@@ -1,55 +1,117 @@
+// src/parser/llm.service.ts
 import { Injectable } from '@nestjs/common';
-import axios from 'axios';
+import { ChatOllama } from '@langchain/ollama';
+import { CertificationSchema } from './certification.schema';
 
 @Injectable()
 export class LlmService {
+  private model;
+
+  constructor() {
+    this.model = new ChatOllama({
+      baseUrl: 'http://localhost:11434',
+      model: 'qwen2.5:7b',
+      temperature: 0,
+    }).withStructuredOutput(CertificationSchema);
+  }
+
   async extractCertificate(fullText: string) {
     const prompt = `
-Extract certificate data from this text as JSON. 
-Use the exact certificate title (do not invent generic names).
-Return ONLY valid JSON.
+Extract certificate data from this text.
 
-Fields:
-- certificate_name
-- certificate_holder
-- provider
-- date_of_obtention
-- date_of_expiration (null if missing)
+Rules:
+
+- Use exact certificate names from the text
+- Do NOT invent anything
+- Keep provider and dates as-is
+- If missing, return null
+
+Return structured output only.
 
 Text:
-"""${fullText}"""
+
+"""
+
+${fullText}
+
+"""
+
+`;
+    try {
+      const result = await this.model.invoke(prompt);
+      console.log('✔ Structured output:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ LLM error:', error);
+      return {
+        error: 'Structured extraction failed',
+
+      };
+
+    }
+
+  }
+  /*  async extractCertificate(fullText: string) {
+
+    const prompt = `
+
+Extract certificate data from this text.
+
+
+
+Rules:
+
+- Use exact certificate names from the text
+
+- Do NOT invent anything
+
+- Keep provider and dates as-is
+
+- If missing, return null
+
+
+
+Return structured output only.
+
+
+
+Text:
+
+"""
+
+${fullText}
+
+"""
+
 `;
 
-   const response = await axios.post('http://localhost:11434/api/chat', {
-  model: 'qwen2.5:3b-instruct-q4_K_M',
-  messages: [
-    {
-      role: 'user',
-      content: prompt,
-    },
-  ],
-   stream: false, 
-});
 
-const raw = response.data.message.content;
 
-console.log("RAW LLM OUTPUT:", raw);
+    try {
 
-// Clean markdown if present
-const cleaned = raw.replace(/```json|```/g, '').trim();
-let parsedJson = JSON.parse(cleaned);
+      const result = await this.model.invoke(prompt);
 
-//  SAFEGUARD: If the LLM wraps the result in an array, unwrap the first object instantly
-if (Array.isArray(parsedJson)) {
-  console.log("⚠️ [Pipeline Warning] Detected LLM array output wrappers. Auto-unwrapping payload...");
-  parsedJson = parsedJson[0];
-}
-try {
-  console.error("llm clean output :", cleaned);
-  return parsedJson;
-} catch (err) {
-  console.error("JSON PARSE ERROR:", err);
-  return { error: "Invalid JSON from LLM", raw };
-}
-}
+
+
+      console.log('✔ Structured output:', result);
+
+
+
+      return result;
+
+    } catch (error) {
+
+      console.error('❌ LLM error:', error);
+
+
+
+      return {
+
+        error: 'Structured extraction failed',
+
+      };
+
+    }
+
+  }*/
 }

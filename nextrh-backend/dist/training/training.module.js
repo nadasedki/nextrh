@@ -13,13 +13,14 @@ const training_controller_1 = require("./training.controller");
 const training_service_1 = require("../training/training.service");
 const training_entity_1 = require("./entities/training.entity");
 const users_module_1 = require("../users/users.module");
+const scoring_module_1 = require("../scoring/scoring.module");
 let TrainingModule = class TrainingModule {
 };
 exports.TrainingModule = TrainingModule;
 exports.TrainingModule = TrainingModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([training_entity_1.Training]), users_module_1.UsersModule
+            typeorm_1.TypeOrmModule.forFeature([training_entity_1.Training]), users_module_1.UsersModule, scoring_module_1.ScoringModule
         ],
         controllers: [training_controller_1.TrainingController],
         providers: [training_service_1.TrainingService],

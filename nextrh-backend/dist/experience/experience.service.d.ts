@@ -22,4 +22,14 @@ export declare class ExperienceService {
         startDate: Date;
         endDate: Date;
     }[]>;
+    update(id: number, userId: number, data: any): Promise<{
+        id: number;
+        company: string;
+        role: string;
+        description: string;
+        startDate: Date;
+        endDate: Date;
+    }>;
+    remove(id: number, userId: number): Promise<Experience>;
+    calculateTotalExperience(userId: number): Promise<number>;
 }

@@ -20,11 +20,11 @@ const multer_1 = require("multer");
 const path_1 = require("path");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 let CvParsingController = class CvParsingController {
-    constructor(cvService) {
-        this.cvService = cvService;
+    constructor(CvParsingService) {
+        this.CvParsingService = CvParsingService;
     }
     async testPdf(body) {
-        const text = await this.cvService.extractTextFromPdf(body.filePath);
+        const text = await this.CvParsingService.extractTextFromPdf(body.filePath);
         return {
             status: 'success',
             raw_text: text,
@@ -36,7 +36,7 @@ let CvParsingController = class CvParsingController {
         }
         const absolutePath = require('path').resolve(file.path);
         const employeeId = req.user.userId;
-        const organizedData = await this.cvService.processPdf(absolutePath, employeeId);
+        const organizedData = await this.CvParsingService.processPdf(absolutePath, employeeId);
         return {
             status: "success",
             data: organizedData,

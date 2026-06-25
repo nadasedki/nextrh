@@ -9,6 +9,8 @@ export declare class HeuristicParserService {
     };
     extractExperience(section: string): any[];
     extractCertifications(section: string): any[];
+    private parseFrenchDate;
+    private inferProvider;
     extractEducation(section: string): any[];
     extractProjects(section: string): any[];
     extractSkills(section: string): any[];
