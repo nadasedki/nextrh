@@ -2,7 +2,7 @@ export class UpdateUserDto {
   email?: string;
   password?: string;
   full_name?: string;
-  role_ids?: number[];
+  role_id?: number;
   active?: boolean;
   department?: string;
 

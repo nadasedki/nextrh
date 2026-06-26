@@ -94,9 +94,8 @@ export declare class EmployeesController {
         department: string;
         years_of_experience: number;
         summary: string;
-        userSkills: import("../skill/entities/user-skill.entity").UserSkill[];
         score: number;
-        roles: import("../users/entities/role.entity").Role[];
+        role: import("../users/entities/role.entity").Role;
         created_at: Date;
         updated_at: Date;
         teams: import("../users/entities/team.entity").Team[];

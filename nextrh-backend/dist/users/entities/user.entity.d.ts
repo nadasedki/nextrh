@@ -3,7 +3,6 @@ import { Team } from './team.entity';
 import { Certification } from 'src/certifications/entities/certification.entity';
 import { Project } from 'src/project/entities/project.entity';
 import { Training } from 'src/training/entities/training.entity';
-import { UserSkill } from 'src/skill/entities/user-skill.entity';
 export declare class User {
     user_id: number;
     email: string;
@@ -14,9 +13,8 @@ export declare class User {
     department: string;
     years_of_experience: number;
     summary: string;
-    userSkills: UserSkill[];
     score: number;
-    roles: Role[];
+    role: Role;
     created_at: Date;
     updated_at: Date;
     teams: Team[];

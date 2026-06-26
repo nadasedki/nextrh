@@ -9,7 +9,7 @@ export declare class RagService {
     private llm;
     constructor(retrieval: RetrievalService, rerank: RerankingService, prompt: PromptService, llm: LlmService);
     ask(question: string): Promise<{
-        answer: any;
+        answer: string;
         sources: any[];
     }>;
 }

@@ -4,7 +4,6 @@ import { Project } from '../project/entities/project.entity';
 import { Training } from '../training/entities/training.entity';
 import { Certification } from '../certifications/entities/certification.entity';
 import { Cv } from '../cvs/entities/cv.entity';
-import { UserSkill } from 'src/skill/entities/user-skill.entity';
 import { Team } from 'src/users/entities/team.entity';
 import { Education } from 'src/education/entities/education.entity';
 export declare class EmployeesService {
@@ -13,11 +12,10 @@ export declare class EmployeesService {
     private trainingRepository;
     private certificationRepository;
     private cvRepository;
-    private userSkillRepository;
     private educationRepository;
     private certRepository;
     private teamRepository;
-    constructor(userRepository: Repository<User>, projectRepository: Repository<Project>, trainingRepository: Repository<Training>, certificationRepository: Repository<Certification>, cvRepository: Repository<Cv>, userSkillRepository: Repository<UserSkill>, educationRepository: Repository<Education>, certRepository: Repository<Certification>, teamRepository: Repository<Team>);
+    constructor(userRepository: Repository<User>, projectRepository: Repository<Project>, trainingRepository: Repository<Training>, certificationRepository: Repository<Certification>, cvRepository: Repository<Cv>, educationRepository: Repository<Education>, certRepository: Repository<Certification>, teamRepository: Repository<Team>);
     getDashboardData(userId: number): Promise<{
         title: string;
         yearsOfExperience: number;
@@ -96,9 +94,8 @@ export declare class EmployeesService {
         department: string;
         years_of_experience: number;
         summary: string;
-        userSkills: UserSkill[];
         score: number;
-        roles: import("../users/entities/role.entity").Role[];
+        role: import("../users/entities/role.entity").Role;
         created_at: Date;
         updated_at: Date;
         teams: Team[];

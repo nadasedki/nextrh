@@ -105,7 +105,7 @@ let AuthService = AuthService_1 = class AuthService {
         const isPasswordValid = await bcrypt.compare(password, user.password_hash);
         if (!isPasswordValid)
             throw new common_1.UnauthorizedException('Password is incorrect');
-        const hasRole = user.roles.some((role) => role.role_name === requestedRole);
+        const hasRole = user.role?.role_name === requestedRole;
         if (!hasRole)
             throw new common_1.UnauthorizedException('Role not assigned to user');
         return user;
@@ -120,7 +120,7 @@ let AuthService = AuthService_1 = class AuthService {
                 user_id: user.user_id,
                 email: user.email,
                 full_name: user.full_name,
-                roles: user.roles.map((r) => r.role_name),
+                role: user.role,
                 active: user.active,
             },
         };

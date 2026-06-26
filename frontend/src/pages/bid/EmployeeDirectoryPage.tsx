@@ -15,7 +15,7 @@ interface ApiEmployee {
   title: string | null;
   years_of_experience: number;
   score: number;
-  userSkills: { skill: { skill_name: string } }[];
+ // userSkills: { skill: { skill_name: string } }[];
   certifications: { certName: string; status: string }[];
 }
 
@@ -77,11 +77,11 @@ const EmployeeDirectoryPage: React.FC = () => {
         // Search in Title (with null check)
         const titleMatch = emp.title?.toLowerCase().includes(lowerCaseQuery);
         // Search in Skills (mapping the nested structure)
-        const skillMatch = emp.userSkills.some(us => 
-          us.skill.skill_name.toLowerCase().includes(lowerCaseQuery)
-        );
-
-        return nameMatch || titleMatch || skillMatch;
+        //const skillMatch = emp.userSkills.some(us => 
+          //us.skill.skill_name.toLowerCase().includes(lowerCaseQuery)
+        //);
+ //return nameMatch || titleMatch || skillMatch;
+        return nameMatch || titleMatch ;
       });
       setDisplayedEmployees(filtered);
     }
@@ -159,7 +159,7 @@ const EmployeeDirectoryPage: React.FC = () => {
                 </span>
               </div>
               
-              {/* Skills Mapping: Accessing nested skill_name */}
+              {/* Skills Mapping: Accessing nested skill_name 
               <div className="flex flex-wrap gap-1 mt-3 h-12 overflow-hidden">
                 {emp.userSkills.slice(0, 4).map((us) => (
                   <Badge key={us.skill.skill_name} variant="secondary" className="text-xs">
@@ -170,7 +170,7 @@ const EmployeeDirectoryPage: React.FC = () => {
                   <Badge variant="outline" className="text-xs">+{emp.userSkills.length - 4}</Badge>
                 )}
               </div>
-              
+              */}
               {/* Navigation: Using user_id */}
               <Button 
                 variant="outline" 

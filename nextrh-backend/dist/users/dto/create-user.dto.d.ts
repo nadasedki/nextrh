@@ -4,5 +4,4 @@ export declare class CreateUserDto {
     full_name: string;
     role_id: number;
     department?: string;
-    role_ids: number[];
 }

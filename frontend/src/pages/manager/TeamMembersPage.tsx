@@ -24,7 +24,7 @@ interface ApiTeamMember {
   email: string;
   title: string;
   yearsOfExperience: number;
-  skills: string[];
+ // skills: string[];
   certifications: { status: string }[];
 }
 
@@ -91,8 +91,8 @@ const fetchMembers = useCallback(async () => {
   // 4. Filtering Logic
   const filteredMembers = teamMembers.filter((member) =>
     member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    member.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    member.skills.some((skill) => skill.toLowerCase().includes(searchQuery.toLowerCase()))
+    member.title.toLowerCase().includes(searchQuery.toLowerCase()) 
+   // member.skills.some((skill) => skill.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const getExpiringCount = (emp: ApiTeamMember) =>
@@ -206,7 +206,7 @@ const handleRemoveMember = async () => {
                 <TableHead>Role</TableHead>
                 <TableHead className="text-center">Active Certs</TableHead>
                 <TableHead className="text-center">Expiring</TableHead>
-                <TableHead>Top Skills</TableHead>
+               {/*  <TableHead>Top Skills</TableHead> */}
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -249,7 +249,7 @@ const handleRemoveMember = async () => {
                       <span className="text-muted-foreground text-sm">None</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  {/*<TableCell>
                     <div className="flex flex-wrap gap-1 max-w-[200px]">
                       {member.skills.slice(0, 3).map((skill) => (
                         <Badge key={skill} variant="secondary" className="text-xs">
@@ -260,7 +260,8 @@ const handleRemoveMember = async () => {
                         <Badge variant="outline" className="text-xs">+{member.skills.length - 3}</Badge>
                       )}
                     </div>
-                  </TableCell>
+                   
+                  </TableCell> */}
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"

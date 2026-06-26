@@ -21,7 +21,6 @@ export declare class TeamsController {
         email: string;
         title: string;
         yearsOfExperience: number;
-        skills: string[];
         certifications: import("../certifications/entities/certification.entity").Certification[];
     }[]>;
     getMyTeamStats(req: any): Promise<{

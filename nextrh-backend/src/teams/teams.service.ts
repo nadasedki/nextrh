@@ -1,4 +1,3 @@
-// src/teams/teams.service.ts
 import { Injectable, NotFoundException, BadRequestException,Inject,forwardRef  } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -42,7 +41,7 @@ if (!user) {
     email: email,
     password_hash: hashedPassword, // Passing the hashed password
     full_name: email.split('@')[0], // Temporary name from email
-    role_ids: [1], // Hardcoded to 1 for EMPLOYEE
+    role_id: 1, // Hardcoded to 1 for EMPLOYEE
   };
 
   // 3. Create the user
@@ -72,7 +71,7 @@ if (!user) {
   // Get all teams
   findAll() {
     return this.teamRepo.find({
-      relations: ['members','members.roles'], // include members
+      relations: ['members','members.role'], // include members
     });
   }
 
@@ -82,7 +81,7 @@ if (!user) {
       where: { team_leader_id: leaderId },
       relations: [
         'members',
-        'members.roles',
+        'members.role',
         'members.certifications' // <--- ADD THIS RELATION
       ],
     });
@@ -151,7 +150,7 @@ if (!user) {
 async findOne(id: number) {
   const team = await this.teamRepo.findOne({
     where: { team_id: id },
-    relations: ['members', 'members.roles'],
+    relations: ['members', 'members.role'],
   });
 
   if (!team) {
@@ -171,7 +170,6 @@ async findMembersByManager(managerId: number) {
       email: member.email,
       title: member.title || 'N/A',
       yearsOfExperience: member.years_of_experience || 0,
-      skills: member.userSkills ? member.userSkills.map(us => us.skill.skill_name) : [],
       certifications: member.certifications || [], // Ensure this relation is loaded in User entity
     }));
   }

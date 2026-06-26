@@ -21,17 +21,15 @@ const project_entity_1 = require("../project/entities/project.entity");
 const training_entity_1 = require("../training/entities/training.entity");
 const certification_entity_1 = require("../certifications/entities/certification.entity");
 const cv_entity_1 = require("../cvs/entities/cv.entity");
-const user_skill_entity_1 = require("../skill/entities/user-skill.entity");
 const team_entity_1 = require("../users/entities/team.entity");
 const education_entity_1 = require("../education/entities/education.entity");
 let EmployeesService = class EmployeesService {
-    constructor(userRepository, projectRepository, trainingRepository, certificationRepository, cvRepository, userSkillRepository, educationRepository, certRepository, teamRepository) {
+    constructor(userRepository, projectRepository, trainingRepository, certificationRepository, cvRepository, educationRepository, certRepository, teamRepository) {
         this.userRepository = userRepository;
         this.projectRepository = projectRepository;
         this.trainingRepository = trainingRepository;
         this.certificationRepository = certificationRepository;
         this.cvRepository = cvRepository;
-        this.userSkillRepository = userSkillRepository;
         this.educationRepository = educationRepository;
         this.certRepository = certRepository;
         this.teamRepository = teamRepository;
@@ -135,7 +133,7 @@ let EmployeesService = class EmployeesService {
     }
     async findAllEmployees() {
         return this.userRepository.find({
-            relations: ['userSkills', 'userSkills.skill', 'certifications'],
+            relations: ['certifications'],
             where: { active: true },
             order: { score: 'DESC' }
         });
@@ -146,7 +144,7 @@ let EmployeesService = class EmployeesService {
                 { full_name: (0, typeorm_2.Like)(`%${query}%`) },
                 { title: (0, typeorm_2.Like)(`%${query}%`) },
             ],
-            relations: ['userSkills', 'userSkills.skill', 'certifications'],
+            relations: ['certifications'],
         });
     }
     async findOne(id) {
@@ -219,12 +217,10 @@ exports.EmployeesService = EmployeesService = __decorate([
     __param(2, (0, typeorm_1.InjectRepository)(training_entity_1.Training)),
     __param(3, (0, typeorm_1.InjectRepository)(certification_entity_1.Certification)),
     __param(4, (0, typeorm_1.InjectRepository)(cv_entity_1.Cv)),
-    __param(5, (0, typeorm_1.InjectRepository)(user_skill_entity_1.UserSkill)),
-    __param(6, (0, typeorm_1.InjectRepository)(education_entity_1.Education)),
-    __param(7, (0, typeorm_1.InjectRepository)(certification_entity_1.Certification)),
-    __param(8, (0, typeorm_1.InjectRepository)(team_entity_1.Team)),
+    __param(5, (0, typeorm_1.InjectRepository)(education_entity_1.Education)),
+    __param(6, (0, typeorm_1.InjectRepository)(certification_entity_1.Certification)),
+    __param(7, (0, typeorm_1.InjectRepository)(team_entity_1.Team)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
-        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,

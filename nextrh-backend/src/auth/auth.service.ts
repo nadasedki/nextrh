@@ -75,8 +75,8 @@ export class AuthService {
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
     if (!isPasswordValid) throw new UnauthorizedException('Password is incorrect');
 
-    const hasRole = user.roles.some((role) => role.role_name === requestedRole);
-    if (!hasRole) throw new UnauthorizedException('Role not assigned to user');
+    const hasRole = user.role?.role_name === requestedRole;
+  if (!hasRole) throw new UnauthorizedException('Role not assigned to user');
 
     return user;
   }
@@ -95,7 +95,7 @@ export class AuthService {
         user_id: user.user_id,
         email: user.email,
         full_name: user.full_name,
-        roles: user.roles.map((r) => r.role_name),
+        role:user.role,
         active: user.active,
       },
     };

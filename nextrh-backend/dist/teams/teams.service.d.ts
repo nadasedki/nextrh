@@ -37,7 +37,6 @@ export declare class TeamsService {
         email: string;
         title: string;
         yearsOfExperience: number;
-        skills: string[];
         certifications: import("../certifications/entities/certification.entity").Certification[];
     }[]>;
     calculateTeamStats(leaderId: number): Promise<{

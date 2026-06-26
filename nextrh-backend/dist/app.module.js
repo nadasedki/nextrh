@@ -16,7 +16,6 @@ const certifications_module_1 = require("./certifications/certifications.module"
 const training_module_1 = require("./training/training.module");
 const project_module_1 = require("./project/project.module");
 const EmployeesModule_1 = require("./Employee/EmployeesModule");
-const skills_module_1 = require("./skill/skills.module");
 const cv_module_1 = require("./cvs/cv.module");
 const parser_module_1 = require("./parser/parser.module");
 const cv_parsing_module_1 = require("./cv-parsing/cv-parsing.module");
@@ -37,15 +36,19 @@ exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
             config_1.ConfigModule.forRoot({ isGlobal: true }),
-            typeorm_1.TypeOrmModule.forRoot({
-                type: 'postgres',
-                host: 'localhost',
-                port: 5434,
-                username: 'postgres',
-                password: 'nadasedki',
-                database: 'nextrh_db',
-                entities: [__dirname + '/**/*.entity{.ts,.js}'],
-                synchronize: true,
+            typeorm_1.TypeOrmModule.forRootAsync({
+                imports: [config_1.ConfigModule],
+                inject: [config_1.ConfigService],
+                useFactory: (configService) => ({
+                    type: 'postgres',
+                    host: configService.get('DB_HOST', 'localhost'),
+                    port: configService.get('DB_PORT', 5434),
+                    username: configService.get('DB_USERNAME', 'postgres'),
+                    password: configService.get('DB_PASSWORD'),
+                    database: configService.get('DB_NAME', 'nextrh_db'),
+                    entities: [__dirname + '/**/*.entity{.ts,.js}'],
+                    synchronize: configService.get('NODE_ENV') !== 'production',
+                }),
             }),
             event_emitter_1.EventEmitterModule.forRoot(),
             users_module_1.UsersModule,
@@ -54,7 +57,6 @@ exports.AppModule = AppModule = __decorate([
             training_module_1.TrainingModule,
             project_module_1.ProjectModule,
             EmployeesModule_1.EmployeesModule,
-            skills_module_1.SkillsModule,
             cv_module_1.CvModule,
             parser_module_1.ParserModule,
             cv_parsing_module_1.CvParsingModule,

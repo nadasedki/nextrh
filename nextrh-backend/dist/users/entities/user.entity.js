@@ -16,7 +16,6 @@ const team_entity_1 = require("./team.entity");
 const certification_entity_1 = require("../../certifications/entities/certification.entity");
 const project_entity_1 = require("../../project/entities/project.entity");
 const training_entity_1 = require("../../training/entities/training.entity");
-const user_skill_entity_1 = require("../../skill/entities/user-skill.entity");
 let User = class User {
 };
 exports.User = User;
@@ -57,22 +56,14 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "summary", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => user_skill_entity_1.UserSkill, (userSkill) => userSkill.user),
-    __metadata("design:type", Array)
-], User.prototype, "userSkills", void 0);
-__decorate([
     (0, typeorm_1.Column)({ default: 0 }),
     __metadata("design:type", Number)
 ], User.prototype, "score", void 0);
 __decorate([
-    (0, typeorm_1.ManyToMany)(() => role_entity_1.Role),
-    (0, typeorm_1.JoinTable)({
-        name: 'user_roles',
-        joinColumn: { name: 'user_id', referencedColumnName: 'user_id' },
-        inverseJoinColumn: { name: 'role_id', referencedColumnName: 'role_id' },
-    }),
-    __metadata("design:type", Array)
-], User.prototype, "roles", void 0);
+    (0, typeorm_1.ManyToOne)(() => role_entity_1.Role, { eager: true, nullable: true }),
+    (0, typeorm_1.JoinColumn)({ name: 'role_id' }),
+    __metadata("design:type", role_entity_1.Role)
+], User.prototype, "role", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'timestamp', default: () => 'NOW()' }),
     __metadata("design:type", Date)

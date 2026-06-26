@@ -16,7 +16,6 @@ const project_entity_1 = require("../project/entities/project.entity");
 const training_entity_1 = require("../training/entities/training.entity");
 const certification_entity_1 = require("../certifications/entities/certification.entity");
 const cv_entity_1 = require("../cvs/entities/cv.entity");
-const user_skill_entity_1 = require("../skill/entities/user-skill.entity");
 const team_entity_1 = require("../users/entities/team.entity");
 const education_entity_1 = require("../education/entities/education.entity");
 let EmployeesModule = class EmployeesModule {
@@ -31,7 +30,6 @@ exports.EmployeesModule = EmployeesModule = __decorate([
                 training_entity_1.Training,
                 certification_entity_1.Certification,
                 cv_entity_1.Cv,
-                user_skill_entity_1.UserSkill,
                 team_entity_1.Team, education_entity_1.Education
             ]),
         ],

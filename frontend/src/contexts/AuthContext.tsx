@@ -65,8 +65,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           TEAM_LEADER: 'manager',
           BID_MANAGER: 'bid_manager',
         };
+ const backendRole = data.user.role?.role_name;
+        
+        if (!backendRole) {
+          return { success: false, message: 'No role assigned to user object' };
+        }
 
-        const mappedRole = backendToFrontendRoleMap[data.user.roles[0]];
+        const mappedRole = backendToFrontendRoleMap[backendRole];
         if (!mappedRole) return { success: false, message: 'Unknown role from backend' };
 
         const loggedUser: User = {

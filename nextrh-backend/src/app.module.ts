@@ -2,7 +2,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+
 import { APP_GUARD } from '@nestjs/core';
 import { RolesGuard } from './auth/roles.guard';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
@@ -10,11 +11,9 @@ import { CertificationsModule } from './certifications/certifications.module';
 import { TrainingModule } from './training/training.module';
 import { ProjectModule } from './project/project.module';
 import { EmployeesModule } from './Employee/EmployeesModule';
-import { SkillsModule } from './skill/skills.module';
+
 
 import { CvModule } from './cvs/cv.module';
-import { ParserController } from './parser/parser.controller';
-import { ParserService } from './parser/parser.service';
 import { ParserModule } from './parser/parser.module';
 import { CvParsingModule } from './cv-parsing/cv-parsing.module';
 import { ExperienceModule } from './experience/experience.module';
@@ -28,20 +27,26 @@ import { CvGenerateModule } from './cv-generate/cv-generate.module';
 import { DocumentModule } from './document-manager/document.module';
 import { ScoringModule } from './scoring/scoring.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-
 @Module({
  imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: 'localhost',
-      port: 5434,
-      username: 'postgres',
-      password: 'nadasedki',
-      database: 'nextrh_db',
-      entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true, // dev only!
-    }),
+   TypeOrmModule.forRootAsync({
+  imports: [ConfigModule],
+  inject: [ConfigService],
+  useFactory: (configService: ConfigService) => ({
+    type: 'postgres',
+    host: configService.get<string>('DB_HOST', 'localhost'),
+    port: configService.get<number>('DB_PORT', 5434),
+    username: configService.get<string>('DB_USERNAME', 'postgres'),
+    password: configService.get<string>('DB_PASSWORD'),
+    database: configService.get<string>('DB_NAME', 'nextrh_db'),
+    // This dynamically loads all your entities automatically
+    entities: [__dirname + '/**/*.entity{.ts,.js}'],
+    // In production, synchronize MUST be false to protect your data.
+    // It will only be true during local development.
+    synchronize: configService.get<string>('NODE_ENV') !== 'production',
+  }),
+}),
      EventEmitterModule.forRoot(),
     UsersModule,
     AuthModule,
@@ -49,7 +54,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     TrainingModule,
     ProjectModule,
     EmployeesModule,
-    SkillsModule,
+    
     CvModule,
     ParserModule,
     CvParsingModule,

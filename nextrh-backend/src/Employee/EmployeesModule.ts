@@ -9,7 +9,6 @@ import { Project } from '../project/entities/project.entity';
 import { Training } from '../training/entities/training.entity';
 import { Certification } from '../certifications/entities/certification.entity';
 import { Cv } from '../cvs/entities/cv.entity';
-import { UserSkill } from 'src/skill/entities/user-skill.entity';
 import { Team } from 'src/users/entities/team.entity';
 import { Education } from 'src/education/entities/education.entity';
 
@@ -24,7 +23,6 @@ import { Education } from 'src/education/entities/education.entity';
       Training,
       Certification,
       Cv,
-      UserSkill,
       Team,Education
     ]),
     // AuthModule, // Import if you need shared authentication logic

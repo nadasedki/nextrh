@@ -1,24 +1,19 @@
-import { forwardRef, Inject, Injectable } from "@nestjs/common";
-import { RetrievalService } from "../retrieval/retrieval.service";
-import { PromptService } from "../prompting/prompt.service";
-import { RagState } from "../types/rag-state";
-import { LlmService } from "../llm/llm.service";
-import { RerankingService } from "../reranking/reranking.service";
+// src/rag/application/rag-pipeline.service.ts
+import { Injectable } from '@nestjs/common';
+import { RetrievalService } from '../retrieval/retrieval.service';
+import { RerankingService } from '../reranking/reranking.service';
+import { PromptService } from '../prompting/prompt.service';
+import { LlmService } from '../llm/llm.service';
+import { RagState } from '../types/rag-state';
 
 @Injectable()
 export class RagPipelineService {
- constructor(
-    @Inject(forwardRef(() => RetrievalService))
-    private retrieval: RetrievalService,
-    
-    @Inject(forwardRef(() => RerankingService))
-    private rerank: RerankingService,
-    
-    @Inject(forwardRef(() => PromptService))
-    private prompt: PromptService,
-    
-    @Inject(forwardRef(() => LlmService))
-    private llm: LlmService,
+  // Les injections se font de manière standard et directe
+  constructor(
+    private readonly retrievalService: RetrievalService,
+    private readonly rerankingService: RerankingService,
+    private readonly promptService: PromptService,
+    private readonly llmService: LlmService,
   ) {}
 
   async run(question: string) {
@@ -28,19 +23,19 @@ export class RagPipelineService {
       reranked: [],
     };
 
-    // 1. Retrieval
-    state.retrieved = await this.retrieval.retrieve(question);
+    // 1. Récupération (Retrieval)
+    state.retrieved = await this.retrievalService.retrieve(question);
 
-    // 2. Reranking
-    state.reranked = this.rerank
+    // 2. Re-classement (Reranking)
+    state.reranked = this.rerankingService
       .rerank(question, state.retrieved)
       .slice(0, 5);
 
-    // 3. Prompt
-    state.prompt = this.prompt.build(question, state.reranked);
+    // 3. Construction du Prompt
+    state.prompt = this.promptService.build(question, state.reranked);
 
-    // 4. LLM
-    state.answer = await this.llm.generate(state.prompt);
+    // 4. Génération de la réponse par le LLM
+    state.answer = await this.llmService.generate(state.prompt);
 
     return {
       answer: state.answer,

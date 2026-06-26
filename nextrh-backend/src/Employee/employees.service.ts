@@ -8,7 +8,7 @@ import { Project } from '../project/entities/project.entity';
 import { Training } from '../training/entities/training.entity';
 import { Certification } from '../certifications/entities/certification.entity';
 import { Cv } from '../cvs/entities/cv.entity';
-import { UserSkill } from 'src/skill/entities/user-skill.entity';
+
 import { Team } from 'src/users/entities/team.entity';
 import { Education } from 'src/education/entities/education.entity';
 
@@ -25,8 +25,7 @@ export class EmployeesService {
     private certificationRepository: Repository<Certification>,
     @InjectRepository(Cv)
     private cvRepository: Repository<Cv>,
-    @InjectRepository(UserSkill)
-    private userSkillRepository: Repository<UserSkill>,
+
      @InjectRepository(Education)
     private educationRepository: Repository<Education>,
     
@@ -158,8 +157,9 @@ return {
   async findAllEmployees() {
     return this.userRepository.find({
         // Include skills and certifications in the response
-        relations: ['userSkills', 'userSkills.skill', 'certifications'],
-        where: { active: true }, // Assuming you have an active flag
+       // relations: ['userSkills', 'userSkills.skill', 'certifications'],
+        relations: ['certifications'], 
+       where: { active: true }, // Assuming you have an active flag
         order: { score: 'DESC' } 
     });
   }
@@ -172,7 +172,9 @@ return {
         // Searching through relations is harder with TypeORM .find(), 
         // you might need QueryBuilder here for better performance
       ],
-      relations: ['userSkills', 'userSkills.skill', 'certifications'],
+      //relations: ['userSkills', 'userSkills.skill', 'certifications'],
+    
+      relations: [ 'certifications'],
     });
   }
   async findOne(id: number) {

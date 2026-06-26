@@ -21,47 +21,74 @@ private experienceRepo: Repository<Experience>
   ) {}
 
 async create(dto: RegisterDto) {
-  // Fetch all roles the user selected
-  const roles = await this.roleRepo.findByIds(dto.role_ids);
+    // Fetch the single selected role using role_id from the DTO
+    const role = await this.roleRepo.findOne({ where: { role_id: dto.role_id } });
 
-  const user = this.userRepo.create({
-    email: dto.email,
-    password_hash: dto.password_hash,
-    full_name: dto.full_name,
-    roles, // Assign array of roles
-  });
-
-  return this.userRepo.save(user); // This will now save multiple roles
-}
-
-
-
-  async findByEmail(email: string) {
-    return this.userRepo.findOne({ where: { email }, relations: ['roles'] });
-  }
-
-  async findAll() {
-    return this.userRepo.find({ relations: ['roles'] });
-  }
-
-async update(user_id: number, dto: Partial<RegisterDto> & { active?: boolean }) {
-    const user = await this.userRepo.findOne({ where: { user_id }, relations: ['roles'] });
-    if (!user) return null;
-
-    if (dto.full_name) user.full_name = dto.full_name;
-    if (dto.role_ids) user.roles = await this.roleRepo.findByIds(dto.role_ids);
-    if (dto.active !== undefined) user.active = dto.active;
+    const user = this.userRepo.create({
+      email: dto.email,
+      password_hash: dto.password_hash,
+      full_name: dto.full_name,
+      role, // Assign the singular role
+    });
 
     return this.userRepo.save(user);
   }
-async findOneById(user_id: number) {
-  return this.userRepo.findOne({ where: { user_id }, relations: ['roles'] });
-}
+
+
+  async update(user_id: number, dto: UpdateUserDto) {
+    const user = await this.userRepo.findOne({
+      where: { user_id },
+      relations: ['role'],
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (dto.full_name) {
+      user.full_name = dto.full_name;
+    }
+
+    if (dto.role_id !== undefined) {
+      const role = await this.roleRepo.findOne({
+        where: { role_id: dto.role_id },
+      });
+
+      if (!role) {
+        throw new NotFoundException('Role not found');
+      }
+
+      user.role = role;
+    }
+
+    if (dto.active !== undefined) {
+      user.active = dto.active;
+    }
+
+    return this.userRepo.save(user);
+  }
+
+  async findByEmail(email: string) {
+    return this.userRepo.findOne({ where: { email }, relations: ['role'] });
+  }
+
+  async findOneById(user_id: number) {
+    return this.userRepo.findOne({ where: { user_id }, relations: ['role'] });
+  }
+
+
+
+ async findAll() {
+    return this.userRepo.find({ relations: ['role'] });
+  }
+
+
+
 
 async remove(user_id: number) {
   const user = await this.userRepo.findOne({ where: { user_id } });
   if (!user) return null;
-  user.active = false; // soft delete
+  user.active = false; 
   return this.userRepo.save(user);
 }
 async findTeamMembers(team_leader_id: number) {

@@ -1,3 +1,7 @@
+import { ConfigService } from '@nestjs/config';
 export declare class LlmService {
-    generate(prompt: string): Promise<any>;
+    private configService;
+    private chatModel;
+    constructor(configService: ConfigService);
+    generate(prompt: string): Promise<string>;
 }

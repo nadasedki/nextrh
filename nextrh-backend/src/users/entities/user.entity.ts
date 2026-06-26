@@ -4,7 +4,7 @@ import { Team } from './team.entity';
 import { Certification } from 'src/certifications/entities/certification.entity';
 import { Project } from 'src/project/entities/project.entity';
 import { Training } from 'src/training/entities/training.entity';
-import { UserSkill } from 'src/skill/entities/user-skill.entity';
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
@@ -30,19 +30,13 @@ export class User {
   years_of_experience: number;
   @Column({ type: 'text', nullable: true })
   summary: string;
-  @OneToMany(() => UserSkill, (userSkill) => userSkill.user)
-  userSkills: UserSkill[];
-
+ 
 @Column({ default: 0 })
   score: number;
     
-  @ManyToMany(() => Role)
-  @JoinTable({
-    name: 'user_roles',
-    joinColumn: { name: 'user_id', referencedColumnName: 'user_id' },
-    inverseJoinColumn: { name: 'role_id', referencedColumnName: 'role_id' },
-})
-  roles: Role[];
+@ManyToOne(() => Role, { eager: true, nullable: true })
+  @JoinColumn({ name: 'role_id' })
+  role: Role;
 
   @Column({ type: 'timestamp', default: () => 'NOW()' })
   created_at: Date;

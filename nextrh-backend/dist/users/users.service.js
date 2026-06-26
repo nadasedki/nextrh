@@ -28,35 +28,48 @@ let UsersService = class UsersService {
         this.experienceRepo = experienceRepo;
     }
     async create(dto) {
-        const roles = await this.roleRepo.findByIds(dto.role_ids);
+        const role = await this.roleRepo.findOne({ where: { role_id: dto.role_id } });
         const user = this.userRepo.create({
             email: dto.email,
             password_hash: dto.password_hash,
             full_name: dto.full_name,
-            roles,
+            role,
         });
         return this.userRepo.save(user);
     }
-    async findByEmail(email) {
-        return this.userRepo.findOne({ where: { email }, relations: ['roles'] });
-    }
-    async findAll() {
-        return this.userRepo.find({ relations: ['roles'] });
-    }
     async update(user_id, dto) {
-        const user = await this.userRepo.findOne({ where: { user_id }, relations: ['roles'] });
-        if (!user)
-            return null;
-        if (dto.full_name)
+        const user = await this.userRepo.findOne({
+            where: { user_id },
+            relations: ['role'],
+        });
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        if (dto.full_name) {
             user.full_name = dto.full_name;
-        if (dto.role_ids)
-            user.roles = await this.roleRepo.findByIds(dto.role_ids);
-        if (dto.active !== undefined)
+        }
+        if (dto.role_id !== undefined) {
+            const role = await this.roleRepo.findOne({
+                where: { role_id: dto.role_id },
+            });
+            if (!role) {
+                throw new common_1.NotFoundException('Role not found');
+            }
+            user.role = role;
+        }
+        if (dto.active !== undefined) {
             user.active = dto.active;
+        }
         return this.userRepo.save(user);
     }
+    async findByEmail(email) {
+        return this.userRepo.findOne({ where: { email }, relations: ['role'] });
+    }
     async findOneById(user_id) {
-        return this.userRepo.findOne({ where: { user_id }, relations: ['roles'] });
+        return this.userRepo.findOne({ where: { user_id }, relations: ['role'] });
+    }
+    async findAll() {
+        return this.userRepo.find({ relations: ['role'] });
     }
     async remove(user_id) {
         const user = await this.userRepo.findOne({ where: { user_id } });

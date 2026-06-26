@@ -76,7 +76,7 @@ let TeamsService = class TeamsService {
                 email: email,
                 password_hash: hashedPassword,
                 full_name: email.split('@')[0],
-                role_ids: [1],
+                role_id: 1,
             };
             user = await this.usersService.create(registerDto);
             await this.authService.sendWelcomeEmail(email, generatedPassword, user.full_name);
@@ -94,7 +94,7 @@ let TeamsService = class TeamsService {
     }
     findAll() {
         return this.teamRepo.find({
-            relations: ['members', 'members.roles'],
+            relations: ['members', 'members.role'],
         });
     }
     async getMyTeam(leaderId) {
@@ -102,7 +102,7 @@ let TeamsService = class TeamsService {
             where: { team_leader_id: leaderId },
             relations: [
                 'members',
-                'members.roles',
+                'members.role',
                 'members.certifications'
             ],
         });
@@ -152,7 +152,7 @@ let TeamsService = class TeamsService {
     async findOne(id) {
         const team = await this.teamRepo.findOne({
             where: { team_id: id },
-            relations: ['members', 'members.roles'],
+            relations: ['members', 'members.role'],
         });
         if (!team) {
             throw new common_1.NotFoundException('Team not found');
@@ -167,7 +167,6 @@ let TeamsService = class TeamsService {
             email: member.email,
             title: member.title || 'N/A',
             yearsOfExperience: member.years_of_experience || 0,
-            skills: member.userSkills ? member.userSkills.map(us => us.skill.skill_name) : [],
             certifications: member.certifications || [],
         }));
     }
