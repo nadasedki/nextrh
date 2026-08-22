@@ -22,9 +22,9 @@ export class ParserController {
   }
 
   @Post('evaluate')
-  // @UseGuards(JwtAuthGuard) // Optionnel : pour sécuriser la route
+  // @UseGuards(JwtAuthGuard) 
   async triggerBatchEvaluation() {
-    // Lance le traitement en arrière-plan
+  
     this.metricsService.runEvaluationAndSaveJson()
       .catch(err => console.error("Evaluation Async Error:", err));
 

@@ -19,11 +19,13 @@ const typeorm_2 = require("@nestjs/typeorm");
 const training_entity_1 = require("./entities/training.entity");
 const user_entity_1 = require("../users/entities/user.entity");
 const scoring_service_1 = require("../scoring/scoring.service");
+const event_emitter_1 = require("@nestjs/event-emitter");
 let TrainingService = class TrainingService {
-    constructor(trainingRepository, userRepository, scoringService) {
+    constructor(trainingRepository, userRepository, scoringService, eventEmitter) {
         this.trainingRepository = trainingRepository;
         this.userRepository = userRepository;
         this.scoringService = scoringService;
+        this.eventEmitter = eventEmitter;
     }
     async create(userId, createDto) {
         const user = await this.userRepository.findOne({
@@ -36,8 +38,13 @@ let TrainingService = class TrainingService {
             ...createDto,
             user_id: userId,
         });
-        await this.trainingRepository.save(training);
+        const savedTraining = await this.trainingRepository.save(training);
         await this.scoringService.calculateAndSaveScore(userId);
+        this.eventEmitter.emit('training.saved', {
+            entityId: savedTraining.training_id,
+            userId,
+        });
+        return savedTraining;
     }
     async findByUser(userId) {
         return this.trainingRepository.find({
@@ -55,7 +62,12 @@ let TrainingService = class TrainingService {
             throw new common_1.NotFoundException('Training not found');
         }
         Object.assign(training, updateDto);
-        return await this.trainingRepository.save(training);
+        const savedTraining = await this.trainingRepository.save(training);
+        this.eventEmitter.emit('training.saved', {
+            entityId: trainingId,
+            userId,
+        });
+        return savedTraining;
     }
     async remove(userId, trainingId) {
         const training = await this.trainingRepository.findOne({
@@ -69,6 +81,10 @@ let TrainingService = class TrainingService {
         }
         await this.trainingRepository.remove(training);
         await this.scoringService.calculateAndSaveScore(userId);
+        this.eventEmitter.emit('training.deleted', {
+            entityId: trainingId,
+            userId,
+        });
         return {
             message: 'Training deleted successfully',
         };
@@ -81,6 +97,7 @@ exports.TrainingService = TrainingService = __decorate([
     __param(1, (0, typeorm_2.InjectRepository)(user_entity_1.User)),
     __metadata("design:paramtypes", [typeorm_1.Repository,
         typeorm_1.Repository,
-        scoring_service_1.ScoringService])
+        scoring_service_1.ScoringService,
+        event_emitter_1.EventEmitter2])
 ], TrainingService);
 //# sourceMappingURL=training.service.js.map

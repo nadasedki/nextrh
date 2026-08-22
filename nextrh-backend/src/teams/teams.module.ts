@@ -1,7 +1,6 @@
-// src/teams/teams.module.ts
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Team } from '../users/entities/team.entity';
+import { Team } from './entities/team.entity';
 import { TeamsService } from './teams.service';
 import { TeamsController } from './teams.controller';
 import { User } from 'src/users/entities/user.entity';
@@ -13,6 +12,6 @@ import { UsersModule } from 'src/users/users.module';
      forwardRef(() => UsersModule),],
   providers: [TeamsService],
   controllers: [TeamsController],
-  exports: [TypeOrmModule, TeamsService], // export TypeOrmModule so UsersModule can inject TeamRepository
+  exports: [TypeOrmModule, TeamsService], 
 })
 export class TeamsModule {}

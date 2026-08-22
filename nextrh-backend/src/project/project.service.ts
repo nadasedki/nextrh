@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Project } from './entities/project.entity'; // Adjust path
-import { CreateProjectDto } from './dto/create-project.dto'; // Adjust path
+import { Project } from './entities/project.entity'; 
+import { CreateProjectDto } from './dto/create-project.dto'; 
 import { Cv } from 'src/cvs/entities/cv.entity';
 import { NotFoundException } from '@nestjs/common';
 import { ScoringService } from 'src/scoring/scoring.service';
+import { EventEmitter2 } from '@nestjs/event-emitter'; 
 @Injectable()
 export class ProjectService {
  
@@ -13,29 +14,30 @@ export class ProjectService {
     @InjectRepository(Project)
     private projectRepository: Repository<Project>,
     private readonly scoringService: ScoringService,
+    private readonly eventEmitter: EventEmitter2, 
+ 
   ) {}
 
 
 async create(userId: number, createDto: CreateProjectDto): Promise<any> {
-  // 1. On sépare les champs du DTO qui ne correspondent pas à l'entité SQL
   const { startDate, endDate, ...otherData } = createDto;
 
-  // 2. On crée l'entité en passant uniquement les champs connus
-  const newProject = this.projectRepository.create({
-    ...otherData, // Contient name, client, role, description, technologies
+   const newProject = this.projectRepository.create({
+    ...otherData, 
     user_id: userId,
-    // On mappe manuellement vers les colonnes de la DB (snake_case)
     start_date: startDate ? new Date(startDate) : null,
     end_date: endDate ? new Date(endDate) : null,
   });
 
-  // 3. Sauvegarde dans la base de données
-  const savedProject = await this.projectRepository.save(newProject);
+    const savedProject = await this.projectRepository.save(newProject);
 
-   // MISE À JOUR DU SCORE ICI
-  await this.scoringService.calculateAndSaveScore(userId);
-  // 4. On retourne l'objet mappé en camelCase pour que 
-  // le frontend (React) puisse l'afficher sans refresh
+   await this.scoringService.calculateAndSaveScore(userId);
+
+    this.eventEmitter.emit('project.saved', {
+      entityId: savedProject.id,
+      userId,
+    });
+
   return {
     ...savedProject,
     startDate: savedProject.start_date, 
@@ -115,7 +117,6 @@ async create(userId: number, createDto: CreateProjectDto): Promise<any> {
 
 
   async update(id: number, userId: number, updateDto: any): Promise<any> {
-  // 1. Rechercher le projet et vérifier la propriété
   const project = await this.projectRepository.findOne({
     where: { id, user_id: userId },
   });
@@ -124,18 +125,19 @@ async create(userId: number, createDto: CreateProjectDto): Promise<any> {
     throw new NotFoundException('Project not found or unauthorized');
   }
 
-  // 2. Extraire les dates pour le mapping
   const { startDate, endDate, ...otherData } = updateDto;
 
-  // 3. Mettre à jour les champs
   Object.assign(project, otherData);
   if (startDate) project.start_date = new Date(startDate);
   if (endDate) project.end_date = new Date(endDate);
 
-  // 4. Sauvegarder
-  const saved = await this.projectRepository.save(project);
+   const saved = await this.projectRepository.save(project);
 
-  // 5. Retourner au format Frontend (camelCase)
+   this.eventEmitter.emit('project.saved', {
+      entityId: id,
+      userId,
+    });
+
   return {
     ...saved,
     startDate: saved.start_date,
@@ -153,7 +155,12 @@ async remove(id: number, userId: number) {
   }
 
   await this.projectRepository.remove(project);
-   // MISE À JOUR DU SCORE ICI
+  
   await this.scoringService.calculateAndSaveScore(userId);
+  
+  this.eventEmitter.emit('project.deleted', {
+      entityId: id,
+      userId,
+    });
 }
 }

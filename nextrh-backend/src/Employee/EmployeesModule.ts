@@ -9,12 +9,17 @@ import { Project } from '../project/entities/project.entity';
 import { Training } from '../training/entities/training.entity';
 import { Certification } from '../certifications/entities/certification.entity';
 import { Cv } from '../cvs/entities/cv.entity';
-import { Team } from 'src/users/entities/team.entity';
+import { Team } from 'src/teams/entities/team.entity';
 import { Education } from 'src/education/entities/education.entity';
-
+import { ProjectModule } from 'src/project/project.module';
+import { TrainingModule } from 'src/training/training.module';
+import { EducationModule } from 'src/education/education.module';
+import { CertificationsModule } from 'src/certifications/certifications.module';
 // If you have a shared AuthModule, import it here for guards
 // import { AuthModule } from '../auth/auth.module';
-
+import { Experience } from 'src/experience/entities/experience.entity';
+import { CvModule } from 'src/cvs/cv.module';
+import { EmployeeProfileService } from './employeeProfile.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -23,12 +28,15 @@ import { Education } from 'src/education/entities/education.entity';
       Training,
       Certification,
       Cv,
-      Team,Education
+      Team,
+      Education,
+      Experience,
     ]),
-    // AuthModule, // Import if you need shared authentication logic
+  
   ],
+  
   controllers: [EmployeesController],
-  providers: [EmployeesService],
-  exports: [EmployeesService], // Export if other modules need to use this service
+  providers: [EmployeesService,EmployeeProfileService],
+  exports: [EmployeeProfileService], 
 })
 export class EmployeesModule {}

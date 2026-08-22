@@ -1,24 +1,38 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
-import { ChatOllama } from '@langchain/ollama';
-import { ConfigService } from '@nestjs/config';
+// src/rag/llm/llm.service.ts
+import { Inject, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { RagStructuredOutput } from '../types/rag-types';
+import { ILlmEngine, LLM_ENGINE } from '../../llm/llm.interface'; // Adjust path if needed [2]
 
 @Injectable()
 export class LlmService {
-  private chatModel: ChatOllama;
+  private readonly logger = new Logger(LlmService.name);
 
-  constructor(private configService: ConfigService) {
-    this.chatModel = new ChatOllama({
-      baseUrl: this.configService.get<string>('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
-      model: this.configService.get<string>('OLLAMA_MODEL', 'qwen2.5:7b'),
-    });
+  constructor(
+    // 1. Inject your global, switchable LLM engine cleanly [2]
+    @Inject(LLM_ENGINE) private readonly llmEngine: ILlmEngine,
+  ) {
+    this.logger.log('RAG LlmService initialized using global LLM_ENGINE strategy [2].');
   }
 
-  async generate(prompt: string): Promise<string> {
+  /**
+   * Generates a structured JSON response from the LLM.
+   * Delegates the call to the active LLM strategy provider, making 
+   * this method compatible with both local and cloud models [1, 2].
+   */
+  async generate(
+    prompt: string,
+    schema: object,
+  ): Promise<RagStructuredOutput> {
     try {
-      const response = await this.chatModel.invoke(prompt);
-      return response.content as string;
-    } catch (error) {
-      throw new ServiceUnavailableException('The AI Inference engine is currently unreachable. Please try again.');
+      // 2. Call the unified engine's structured generator [2]
+      // No more raw axios, manual JSON parsing, or timeout handling!
+      const parsed = await this.llmEngine.generateStructured<RagStructuredOutput>(prompt, schema);
+      return parsed;
+    } catch (error: any) {
+      this.logger.error(`LLM generation failed: ${error.message}`);
+      throw new ServiceUnavailableException(
+        'The AI inference engine is currently unreachable. Please try again.',
+      );
     }
   }
 }

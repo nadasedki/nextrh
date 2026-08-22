@@ -17,6 +17,7 @@ import {
   Building2,
   Calendar,
   Loader2,
+  Trash2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -56,8 +57,16 @@ interface Education {
   startYear: number;  
   graduationYear: number;
 }
-
+interface Experience {
+  id: number;
+  company: string;
+  role?: string; 
+  startDate: string;
+  endDate?: string;
+  description?: string;
+}
 interface CvData {
+ id?: number;
  name: string;
   profession: string; 
   email: string;
@@ -67,6 +76,7 @@ interface CvData {
   department: string;
   summary: string;
   skills: string[];
+  experiences: Experience[];
   projects: Project[];
   certifications: Certification[];
   trainings: Training[];
@@ -80,6 +90,7 @@ const CVPreviewPage: React.FC = () => {
   // --- STATE MANAGEMENT ---
   const [cvData, setCvData] = useState<CvData | null>(null);
   const [loading, setLoading] = useState(true);
+   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
   const token = localStorage.getItem('token');
   // ------------------------
@@ -115,6 +126,45 @@ const CVPreviewPage: React.FC = () => {
 
     fetchCvData();
   }, [token, user]);
+  // -------------------------------
+   // --- DELETE CV ACTION ---
+  const handleDeleteCv = async () => {
+    const cvId =  cvData?.id;
+    if (!cvId) {
+      alert('Unable to identify CV ID.');
+      return;
+    }
+
+    const confirmDelete = window.confirm(
+      'Êtes-vous sûr de vouloir supprimer votre CV ? Cette action supprimera toutes les données associées.'
+    );
+    if (!confirmDelete) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`http://localhost:3000/cvs/${cvId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to delete CV');
+      }
+
+      // Reset state on successful delete
+      setCvData(null);
+      alert('CV supprimé avec succès.');
+    } catch (err: any) {
+      console.error(err);
+      alert(`Erreur lors de la suppression : ${err.message}`);
+    } finally {
+      setDeleting(false);
+    }
+  };
   // -------------------------------
 const formatStartDate = (dateString?: string | null) => {
   if (!dateString) return 'N/A'; // ou 'Unknown'
@@ -171,15 +221,23 @@ const formatEndDate = (dateString?: string | null) => {
           <h1 className="text-2xl font-bold text-foreground">CV Preview</h1>
           <p className="text-muted-foreground">Your professional CV</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Printer className="h-4 w-4 mr-2" />
-            Print
+                <div className="flex items-center gap-2">
+        
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDeleteCv}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4 mr-2" />
+            )}
+            Supprimer CV
           </Button>
-          <Button size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Download PDF
-          </Button>
+
+          
         </div>
       </div>
 
@@ -245,8 +303,43 @@ const formatEndDate = (dateString?: string | null) => {
               </div>
             </section>
           )}
+          {/* 4. Professional Work Experience Section */}
+          {cvData.experiences && cvData.experiences.length > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
+                <Briefcase className="h-5 w-5 text-primary" />
+                Work Experience
+              </h2>
+              <div className="space-y-6">
+                {cvData.experiences.map((exp) => (
+                  <div key={exp.id} className="border-l-2 border-primary/30 pl-4">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+                      <div>
+                        {/* Fallback to company name as header if optional role is missing */}
+                        <h3 className="font-semibold text-foreground">
+                          {exp.role || exp.company}
+                        </h3>
+                        {exp.role && (
+                          <p className="text-sm text-primary font-medium">{exp.company}</p>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground flex items-center gap-1">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {formatStartDate(exp.startDate)} - {formatEndDate(exp.endDate)}
+                      </div>
+                    </div>
+                    {exp.description && (
+                      <p className="mt-2 text-sm text-muted-foreground whitespace-pre-line">
+                        {exp.description}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
-          {/* Experience Section */}
+          {/* projects Section */}
           {cvData.projects.length > 0 && (
             <section>
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">

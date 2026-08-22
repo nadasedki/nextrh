@@ -112,18 +112,34 @@ const handleAddMember = async () => {
   try {
     const res = await fetch('http://localhost:3000/teams/members', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: { 
+        'Authorization': `Bearer ${token}`, 
+        'Content-Type': 'application/json' 
+      },
       body: JSON.stringify({ email: newMemberEmail }),
     });
-    if (!res.ok) throw new Error('Failed to add');
+
+    // If the server returns a 400 or 404 error
+    if (!res.ok) {
+      // 1. Safely parse the JSON body returned by your backend
+      const errorData = await res.json().catch(() => ({}));
+      
+      // 2. Extract the specific NestJS error message, or fall back to a default string
+      const serverMessage = errorData.message || 'Failed to add';
+      
+      // 3. Throw the actual error so it triggers the catch-block below
+      throw new Error(serverMessage);
+    }
+
     toast.success("Member added");
     setIsAddOpen(false);
     setNewMemberEmail('');
     fetchMembers();
-    // Trigger a re-fetch here if necessary
-  } catch (err) { toast.error("Error adding member"); }
+  } catch (err: any) { 
+    // 4. Display the actual error message dynamically in your toast notification
+    toast.error(err.message || "Error adding member"); 
+  }
 };
-
 const handleRemoveMember = async () => {
   if (!memberToRemove) return;
   try {

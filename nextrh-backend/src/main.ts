@@ -5,7 +5,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
  // Enable CORS so  React frontend can call this backend
   app.enableCors({
-    origin: 'http://localhost:8080', //  frontend URL
+  //  origin: 'http://localhost:8080', 
+    origin: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true, // optional: allow cookies
   });
@@ -13,8 +14,11 @@ async function bootstrap() {
   await app.listen(3000); // backend port
 
 app.useGlobalPipes(new ValidationPipe({
-  transform: true // automatically converts strings to numbers
-}));
+  whitelist: true, // Automatically strips out any extra fields not defined in your DTOs
+  transform: true, // Automatically converts plain request bodies into DTO class objects
+ 
+},
+));
 }
 
 bootstrap();

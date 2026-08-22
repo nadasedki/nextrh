@@ -1,15 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext'; // 1. Import Auth
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { StatusBadge } from '@/components/common';
-import { ArrowLeft, Mail, Building2, Calendar, Award, Briefcase, GraduationCap, Code, Loader2, Phone, MapPin, Hash } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { 
+  ArrowLeft, 
+  Mail, 
+  Building2, 
+  Calendar, 
+  Award, 
+  Briefcase, 
+  GraduationCap, 
+  Code, 
+  Loader2, 
+  Phone, 
+  MapPin, 
+  Hash,
+  Plus,
+  Pencil,
+  Trash2
+} from 'lucide-react';
 import { format } from 'date-fns';
 
-// 2. Define Interface based on your DB Schema & Postman Response
 interface UserSkill {
   skill: { skill_name: string; };
   level: string;
@@ -39,6 +64,7 @@ interface Training {
   provider: string;
   completion_date: string;
   duration: string;
+  description?: string; // Optional description property
 }
 
 interface UserProfile {
@@ -62,18 +88,30 @@ interface UserProfile {
 }
 
 const MemberProfilePage: React.FC = () => {
-  // 3. Handle both URL parameter types (Manager vs Bid)
   const { memberId, id } = useParams(); 
-  const targetId = memberId || id; // Use whichever exists
+  const targetId = memberId || id; 
 
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth(); // Retrieve token and user profile to verify roles [1.1.2]
 
+  // Role-Based Access Control: Show actions only to managers & team leaders [1.1.2]
+ const canManage = user?.role === 'manager' || user?.role === 'bid_manager' || user?.role === 'admin';
   const [member, setMember] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 4. Fetch Real Data
+  // Dialog & Form States for Training CRUD
+  const [isTrainingDialogOpen, setIsTrainingDialogOpen] = useState(false);
+  const [editingTrainingId, setEditingTrainingId] = useState<number | null>(null);
+  const [trainingForm, setTrainingForm] = useState({
+    training_name: '',
+    provider: '',
+    description: '',
+    completion_date: '',
+    duration: '',
+  });
+
+  // Fetch Member Details
   useEffect(() => {
     if (!token || !targetId) return;
 
@@ -108,6 +146,110 @@ const MemberProfilePage: React.FC = () => {
       return format(new Date(dateString), 'MMM yyyy');
     } catch {
       return dateString;
+    }
+  };
+
+  const formatDateForInput = (dateString?: string | null) => {
+    if (!dateString) return '';
+    try {
+      return new Date(dateString).toISOString().split('T')[0];
+    } catch {
+      return '';
+    }
+  };
+
+  // ==========================================
+  // TRAINING CRUD OPERATIONS
+  // ==========================================
+
+  const handleDeleteTraining = async (trainingId: number) => {
+    if (!confirm('Are you sure you want to delete/unassign this training?')) return;
+
+    try {
+      const res =  await fetch(`http://localhost:3000/trainings/${id}/${targetId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error('Failed to delete training');
+
+      // Update state locally so change is visible immediately
+      setMember(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          trainings: prev.trainings?.filter(t => t.training_id !== trainingId) || []
+        };
+      });
+    } catch (err) {
+      console.error('Error deleting training:', err);
+    }
+  };
+
+  const openEditTraining = (training: Training) => {
+    setEditingTrainingId(training.training_id);
+    setTrainingForm({
+      training_name: training.training_name,
+      provider: training.provider,
+      description: training.description || '',
+      completion_date: formatDateForInput(training.completion_date),
+      duration: training.duration || '',
+    });
+    setIsTrainingDialogOpen(true);
+  };
+
+  const handleAddOrEditTraining = async () => {
+    const method = editingTrainingId ? 'PATCH' : 'POST';
+   const url = editingTrainingId
+      ? `http://localhost:3000/trainings/${editingTrainingId}/${targetId}` 
+      : `http://localhost:3000/trainings/${targetId}`;                    
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(trainingForm),
+      });
+
+      if (!res.ok) throw new Error('Failed to save training');
+      const savedTraining = await res.json();
+
+      setMember(prev => {
+        if (!prev) return null;
+        const currentTrainings = prev.trainings || [];
+        let updatedTrainings;
+
+        if (editingTrainingId) {
+          updatedTrainings = currentTrainings.map(t =>
+            t.training_id === editingTrainingId ? savedTraining : t
+          );
+        } else {
+          updatedTrainings = [...currentTrainings, savedTraining];
+        }
+
+        return {
+          ...prev,
+          trainings: updatedTrainings,
+        };
+      });
+
+      // Clear Form & Close dialog
+      setTrainingForm({
+        training_name: '',
+        provider: '',
+        description: '',
+        completion_date: '',
+        duration: '',
+      });
+      setEditingTrainingId(null);
+      setIsTrainingDialogOpen(false);
+    } catch (err) {
+      console.error('Error saving training:', err);
     }
   };
 
@@ -155,31 +297,28 @@ const MemberProfilePage: React.FC = () => {
               <div className="flex flex-wrap gap-4 mt-3 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <Mail className="h-4 w-4" />
-                  {member.cv_email }
+                  {member.cv_email}
                 </span>
-                 <span className="flex items-center gap-1.5">
-      <Phone className="h-4 w-4 text-primary" />
-      {member.cv_phone}
-    </span>
-    <span className="flex items-center gap-1.5">
-      <Hash className="h-4 w-4 text-primary" />
-      Fax: {member.cv_fax}
-    </span>
-    
-    <span className="flex items-center col-span-full gap-1.5">
-      <MapPin className="h-4 w-4 text-primary" />
-      {member.cv_address}
-    </span>
-                
+                <span className="flex items-center gap-1.5">
+                  <Phone className="h-4 w-4 text-primary" />
+                  {member.cv_phone}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Hash className="h-4 w-4 text-primary" />
+                  Fax: {member.cv_fax}
+                </span>
+                <span className="flex items-center col-span-full gap-1.5">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  {member.cv_address}
+                </span>
               </div>
-             
             </div>
           </div>
         </CardContent>
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Skills - Updated to use userSkills -> skill.skill_name */}
+        {/* Skills */}
         <Card className="animate-fade-in" style={{ animationDelay: '100ms' }}>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -192,8 +331,8 @@ const MemberProfilePage: React.FC = () => {
               {member.cv_skills && member.cv_skills.length > 0 ? (
                 member.cv_skills.map((skill, index) => (
                   <Badge key={index} variant="secondary" className="text-sm bg-primary/5 text-primary border-primary/10">
-          {skill}
-        </Badge>
+                    {skill}
+                  </Badge>
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground">No skills listed</p>
@@ -202,7 +341,7 @@ const MemberProfilePage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Certifications - Updated to use API field names */}
+        {/* Certifications */}
         <Card className="animate-fade-in" style={{ animationDelay: '200ms' }}>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -222,7 +361,6 @@ const MemberProfilePage: React.FC = () => {
                       <p className="font-medium text-sm">{cert.certName}</p>
                       <p className="text-xs text-muted-foreground">{cert.provider}</p>
                     </div>
-                    {/* Assuming StatusBadge can handle string inputs like 'active' */}
                     <StatusBadge status={cert.status as any} />
                   </div>
                 ))}
@@ -235,24 +373,68 @@ const MemberProfilePage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Training - Safely handled if API missing it */}
+        {/* Training Card with Conditional CRUD Button */}
         <Card className="animate-fade-in" style={{ animationDelay: '300ms' }}>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <GraduationCap className="h-5 w-5 text-primary" />
               Training ({member.trainings?.length || 0})
             </CardTitle>
+            {canManage && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  setEditingTrainingId(null);
+                  setTrainingForm({
+                    training_name: '',
+                    provider: '',
+                    description: '',
+                    completion_date: '',
+                    duration: '',
+                  });
+                  setIsTrainingDialogOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Assign Training
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             {member.trainings && member.trainings.length > 0 ? (
               <div className="space-y-3">
                 {member.trainings.map((training) => (
-                  <div key={training.training_id} className="p-3 rounded-lg bg-muted/50">
-                    <p className="font-medium text-sm">{training.training_name}</p>
+                  <div key={training.training_id} className="p-3 rounded-lg bg-muted/50 relative group">
+                    {canManage && (
+                      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => openEditTraining(training)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => handleDeleteTraining(training.training_id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                    <p className="font-medium text-sm pr-16">{training.training_name}</p>
                     <p className="text-xs text-muted-foreground">{training.provider}</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {formatDate(training.completion_date)} • {training.duration}
                     </p>
+                    {training.description && (
+                      <p className="text-xs text-muted-foreground mt-1.5">
+                        {training.description}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -264,7 +446,7 @@ const MemberProfilePage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Projects - Safely handled if API missing it */}
+        {/* Projects */}
         <Card className="animate-fade-in" style={{ animationDelay: '400ms' }}>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -307,6 +489,101 @@ const MemberProfilePage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Dialog Modal for Managing Assigned Trainings */}
+      <Dialog open={isTrainingDialogOpen} onOpenChange={setIsTrainingDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingTrainingId ? 'Edit Assigned Training' : 'Assign New Training'}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1">
+              <Label>Training Name</Label>
+              <Input
+                placeholder="e.g., Docker Certified Associate"
+                value={trainingForm.training_name}
+                onChange={(e) =>
+                  setTrainingForm({
+                    ...trainingForm,
+                    training_name: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Provider</Label>
+              <Input
+                placeholder="e.g., Coursera, Udemy, Cisco"
+                value={trainingForm.provider}
+                onChange={(e) =>
+                  setTrainingForm({
+                    ...trainingForm,
+                    provider: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Completion Date</Label>
+              <Input
+                type="date"
+                value={trainingForm.completion_date}
+                onChange={(e) =>
+                  setTrainingForm({
+                    ...trainingForm,
+                    completion_date: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Duration</Label>
+              <Input
+                placeholder="e.g., 40 hours, 3 weeks"
+                value={trainingForm.duration}
+                onChange={(e) =>
+                  setTrainingForm({
+                    ...trainingForm,
+                    duration: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Description</Label>
+              <Textarea
+                placeholder="Briefly describe the training content..."
+                value={trainingForm.description}
+                onChange={(e) =>
+                  setTrainingForm({
+                    ...trainingForm,
+                    description: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsTrainingDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleAddOrEditTraining}>
+              {editingTrainingId ? 'Save Changes' : 'Assign'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

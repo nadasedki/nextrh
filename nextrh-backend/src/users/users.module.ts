@@ -5,7 +5,6 @@ import { Role } from './entities/role.entity';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { TeamsModule } from 'src/teams/teams.module'; 
-import { AuthModule } from 'src/auth/auth.module';
 import { ExperienceModule } from 'src/experience/experience.module';
 import { Experience } from 'src/experience/entities/experience.entity';
 @Module({
@@ -15,6 +14,6 @@ import { Experience } from 'src/experience/entities/experience.entity';
     ],
   providers: [UsersService],
   controllers: [UsersController],
-  exports: [UsersService,TypeOrmModule], // export to use in AuthService
+  exports: [UsersService,TypeOrmModule],
 })
 export class UsersModule {}

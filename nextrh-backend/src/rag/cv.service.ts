@@ -1,15 +1,17 @@
+// src/rag/cv.service.ts
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { CvProfile } from './types/cv-index.types';
 
 @Injectable()
 export class CvService {
   constructor(@InjectDataSource() private dataSource: DataSource) {}
 
   /**
-   * Get all CVs (basic profile layer)
+   * Get all CVs basic profiles (Requires a valid user_id link)
    */
-  async getAllCVs() {
+  async getAllCVs(): Promise<CvProfile[]> {
     return await this.dataSource.query(`
       SELECT 
         cv_id,
@@ -22,10 +24,33 @@ export class CvService {
         address,
         skills
       FROM public.cvs
+      WHERE user_id IS NOT NULL
     `);
   }
 
-  
+  /**
+   * Fetch a single candidate profile record cleanly using their user_id
+   */
+  async getCVByUserId(userId: number): Promise<CvProfile | null> {
+    const rows = await this.dataSource.query(`
+      SELECT 
+        cv_id,
+        user_id,
+        full_name,
+        profession,
+        email,
+        phone,
+        fax,
+        address,
+        skills
+      FROM public.cvs
+      WHERE user_id = $1
+      LIMIT 1
+    `, [userId]);
+    
+    return rows.length > 0 ? rows[0] : null;
+  }
+
   async getAllCertifications() {
     return await this.dataSource.query(`
       SELECT * FROM public.certifications
@@ -33,100 +58,81 @@ export class CvService {
   }
 
   /**
-   * Education still linked to cv OR user (depending on your DB)
+   * Fetch elements by bridging the cvCvId relation to the primary user_id
    */
-  async getEducationByCvId(cvId: number) {
+  async getEducationByUserId(userId: number) {
     return await this.dataSource.query(
-      `SELECT * FROM public.education WHERE "cvCvId" = $1`,
-      [cvId],
+      `SELECT e.* FROM public.educations e 
+       JOIN public.cvs cv ON e."cvCvId" = cv.cv_id 
+       WHERE cv.user_id = $1`,
+      [userId],
     );
   }
 
-  async getProjectsByCvId(cvId: number) {
+  async getProjectsByUserId(userId: number) {
     return await this.dataSource.query(
-      `SELECT * FROM public.projects WHERE "cvCvId" = $1`,
-      [cvId],
+      `SELECT p.* FROM public.projects p 
+       JOIN public.cvs cv ON p."cvCvId" = cv.cv_id 
+       WHERE cv.user_id = $1`,
+      [userId],
     );
   }
 
-  async getExperiencesByCvId(cvId: number) {
+  async getExperiencesByUserId(userId: number) {
     return await this.dataSource.query(
-      `SELECT * FROM public.experiences WHERE "cvCvId" = $1`,
-      [cvId],
+      `SELECT e.* FROM public.experiences e 
+       JOIN public.cvs cv ON e."cvCvId" = cv.cv_id 
+       WHERE cv.user_id = $1`,
+      [userId],
     );
-  }
-
-
-  async getAllUnifiedProfiles() {
-    const cvs = await this.getAllCVs();
-    const certs = await this.getAllCertifications();
-
-    const profiles = [];
-
-    for (const cv of cvs) {
-      const identityKey = (cv.full_name || '').toLowerCase();
-
-      const profileCerts = certs.filter(
-        c =>
-          (c.certificate_holder || '').toLowerCase() === identityKey,
-      );
-
-      const education = await this.getEducationByCvId(cv.cv_id);
-      const projects = await this.getProjectsByCvId(cv.cv_id);
-      const experiences = await this.getExperiencesByCvId(cv.cv_id);
-
-      profiles.push({
-        ...cv,
-        identity_key: identityKey,
-        certifications: profileCerts,
-        education,
-        projects,
-        experiences,
-      });
-    }
-
-    return profiles;
   }
 
   /**
-   * Names for retrieval
+   * Fetches certifications for a specific user.
+   * FIX: Removed try/catch block to stop silent array corruption.
    */
+  async getCertificationsByUserId(userId: number) {
+    return await this.dataSource.query(
+      `SELECT c.* FROM public.certifications c
+       JOIN public.cvs cv ON c."cvCvId" = cv.cv_id
+       WHERE cv.user_id = $1`,
+      [userId],
+    );
+  }
+/**
+   * Fetch professional training modules assigned directly to the primary user_id
+   */
+  async getTrainingsByUserId(userId: number) {
+    return await this.dataSource.query(`
+      SELECT 
+        training_id,
+        user_id,
+        training_name,
+        provider,
+        description,
+        completion_date,
+        duration
+      FROM public.training_sessions
+      WHERE user_id = $1
+    `, [userId]);
+  }
+  /**
+   * Used by event listeners for single item sync context retrieval
+   */
+  async getCertificationWithCvContext(certId: number) {
+    const [result] = await this.dataSource.query(`
+      SELECT c.*, cv.full_name, cv.profession, cv.user_id, cv.cv_id
+      FROM certifications c
+      JOIN cvs cv ON c."cvCvId" = cv.cv_id
+      WHERE c.cert_id = $1
+    `, [certId]);
+    return result;
+  }
+
   async getAllNames(): Promise<string[]> {
     const result = await this.dataSource.query(`
       SELECT DISTINCT full_name FROM public.cvs WHERE full_name IS NOT NULL
     `);
-
     return result.map(r => r.full_name);
   }
-  async getCertificationsByCvId(cvId: number) {
-  try {
-    const result = await this.dataSource.query(
-      `
-      SELECT *
-      FROM public.certifications
-      WHERE "cvCvId" = $1
-      `,
-      [cvId],
-    );
-
-    return result;
-  } catch (err) {
-    console.error(
-      'Erreur SQL certifications by holder:',
-      err.message,
-    );
-    return [];
-  }
-}
-//
-// Dans src/cvs/cv.service.ts
-async getCertificationWithCvContext(certId: number) {
-  const [result] = await this.dataSource.query(`
-    SELECT c.*, cv.full_name, cv.profession, cv.cv_id
-    FROM certifications c
-    JOIN cvs cv ON c."cvCvId" = cv.cv_id
-    WHERE c.cert_id = $1
-  `, [certId]);
-  return result;
-}
 }

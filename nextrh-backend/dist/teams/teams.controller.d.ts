@@ -1,21 +1,21 @@
 import { TeamsService } from './teams.service';
 import { CreateTeamDto } from './dto/create-team.dto';
-import { AddMemberDto } from 'src/teams/dto/add-member.dto';
+import { InviteMemberDto } from './dto/invite-member.dto';
+export declare const CurrentUser: (...dataOrPipes: unknown[]) => ParameterDecorator;
 export declare class TeamsController {
     private readonly teamsService;
     constructor(teamsService: TeamsService);
-    create(dto: CreateTeamDto): Promise<import("../users/entities/team.entity").Team>;
-    findAll(): Promise<import("../users/entities/team.entity").Team[]>;
-    addMember(req: any, email: string): Promise<{
+    create(dto: CreateTeamDto): Promise<import("./entities/team.entity").Team>;
+    findAll(): Promise<import("./entities/team.entity").Team[]>;
+    addMember(user: any, dto: InviteMemberDto): Promise<{
         message: string;
         user_id: number;
     }>;
-    getMyTeam(req: any): Promise<import("../users/entities/team.entity").Team>;
-    removeMember(dto: AddMemberDto): Promise<{
+    getMyTeam(user: any): Promise<import("./entities/team.entity").Team>;
+    removeMember(user: any, memberId: number): Promise<{
         message: string;
     }>;
-    findOne(id: number): Promise<import("../users/entities/team.entity").Team>;
-    getMyTeamMembers(req: any): Promise<{
+    getMyTeamMembers(user: any): Promise<{
         id: number;
         name: string;
         email: string;
@@ -23,7 +23,7 @@ export declare class TeamsController {
         yearsOfExperience: number;
         certifications: import("../certifications/entities/certification.entity").Certification[];
     }[]>;
-    getMyTeamStats(req: any): Promise<{
+    getMyTeamStats(user: any): Promise<{
         teamName: string;
         totalMembers: number;
         certStats: {
@@ -36,21 +36,14 @@ export declare class TeamsController {
             value: number;
         }[];
         expiringCerts: {
-            employeeName: string;
-            certId: number;
-            certName: string;
+            id: number;
+            name: string;
+            expiryDate: string;
             provider: string;
-            issueDate: Date;
-            expiryDate: Date;
-            filePath: string;
-            status: string;
-            credentialId: string;
-            user: import("../users/entities/user.entity").User;
-            userId: number;
-            cv: import("../cvs/entities/cv.entity").Cv;
+            employeeName: string;
         }[];
     }>;
-    getMyTeamCertifications(req: any): Promise<{
+    getMyTeamCertifications(user: any): Promise<{
         employeeName: string;
         employeeTitle: string;
         certId: number;
@@ -65,4 +58,5 @@ export declare class TeamsController {
         userId: number;
         cv: import("../cvs/entities/cv.entity").Cv;
     }[]>;
+    findOne(id: number): Promise<import("./entities/team.entity").Team>;
 }

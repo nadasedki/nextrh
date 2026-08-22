@@ -73,12 +73,12 @@ for (const [filePath, expected] of Object.entries(groundTruth)) {
 
       parsed = {
         certName:
-          aiResponse.certificate_name || aiResponse.certName || '',
+          aiResponse.certificate_name  || '',
         provider: aiResponse.provider || '',
         issueDate:
-          aiResponse.date_of_obtention || aiResponse.issueDate || '',
+          aiResponse.date_of_obtention|| '',
         expiryDate:
-          aiResponse.date_of_expiration || aiResponse.expiryDate || '',
+          aiResponse.date_of_expiration || '',
       };
     }
   } catch (error) {

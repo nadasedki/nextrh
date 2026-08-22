@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { ScoringService } from './scoring.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard'; 
-import { RolesGuard } from '../auth/roles.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; 
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
 @Controller('scoring')

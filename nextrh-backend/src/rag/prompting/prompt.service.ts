@@ -1,98 +1,108 @@
-import { Injectable } from '@nestjs/common';
+// src/rag/prompting/prompt.service.ts
+
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
+import { RankedResult,RagStructuredOutput } from '../types/rag-types';
+
+
 
 @Injectable()
-export class PromptService {
-  build(question: string, chunks: any[]) {
-    const context = chunks
-      .map((c, i) => `[DOC ${i + 1}]\n${c.payload.text}`)
+export class PromptService implements OnModuleInit {
+  private readonly logger = new Logger(PromptService.name);
+
+  // loaded from disk once at startup — not rebuilt on every request
+  private promptTemplate: string = '';
+
+  private readonly PROMPT_PATH = path.join(
+    process.cwd(),
+    'src/assets/prompts/rag-prompt.md',
+  );
+
+  // JSON schema passed to Ollama to constrain token generation
+  // the model cannot return anything that does not match this shape
+  readonly OUTPUT_SCHEMA = {
+    type: 'object',
+    properties: {
+      reasoning: {
+        type: 'string',
+        description:
+          'Step-by-step validation of each candidate against the conditions in the question.',
+      },
+      answer: {
+        type: 'string',
+        description:
+          'Final candidate name(s). If no single candidate meets all conditions, write "No candidate satisfies all criteria."',
+      },
+      explanation: {
+        type: 'string',
+        description: 'One sentence summarizing why this conclusion was reached.',
+      },
+      confidence: {
+        type: 'number',
+        minimum: 0,
+        maximum: 1,
+        description: 'Confidence score between 0 and 1.',
+      },
+      sources: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'List of document references used to reach the answer.',
+      },
+    },
+    required: [
+      'reasoning',
+      'answer',
+      'explanation',
+      'confidence',
+      'sources',
+    ],
+  };
+
+  // load the prompt template from disk once when the module initializes
+  // storing it in memory avoids file I/O on every request
+  onModuleInit() {
+    try {
+      this.promptTemplate = fs.readFileSync(this.PROMPT_PATH, 'utf-8');
+      this.logger.log('RAG prompt template loaded from disk.');
+    } catch (err: any) {
+      this.logger.error(
+        `Failed to load prompt template from ${this.PROMPT_PATH}: ${err.message}. ` +
+        `Using minimal fallback.`,
+      );
+      // minimal fallback so the pipeline does not crash if the file is missing
+      this.promptTemplate = 'FACTS:\n{context}\n\nQUESTION:\n{question}';
+    }
+  }
+
+  build(question: string, chunks: RankedResult[]): string {
+    // filter out any chunks with missing or empty text
+    const validChunks = (chunks || []).filter(
+      c =>
+        c?.payload &&
+        typeof c.payload.text === 'string' &&
+        c.payload.text.trim().length > 0,
+    );
+
+    if (validChunks.length === 0) {
+      this.logger.warn(
+        `No valid chunks for query: "${question}" — LLM will receive empty context`,
+      );
+    }
+
+    // include candidate name and section type in each doc header
+    // this gives the LLM explicit attribution without relying on the chunk text alone
+    const context = validChunks
+      .map((c, i) => {
+        const candidate = c.payload.full_name || 'Unknown';
+        const section = c.payload.type || 'profile';
+        return `[DOC ${i + 1}] (Candidat: ${candidate} | Section: ${section})\n${c.payload.text}`;
+      })
       .join('\n\n');
 
-    return `
-You are an intelligent Retrieval-Augmented Generation (RAG) assistant working on structured documents (CVs, profiles, and records).
-
-You MUST follow these rules:
-
----
-
-## 1. Grounding rule (VERY IMPORTANT)
-- Use ONLY the provided context ("FACTS") to answer.
-- Do NOT invent missing information.
-- If information is partially available, infer reasonably but stay faithful to the facts.
-
----
-
-## 2. Question type handling
-
-### A) Factual questions
-(e.g., "Who has CCNA?", "What is X’s experience?")
-
-- Extract exact information from the facts.
-- Be precise and concise.
-- If not found, say:
-  "Not found in the provided data."
-
----
-
-### B) Comparative / ranking questions
-(e.g., "Who is the best network engineer?", "Who has more experience?")
-
-- Do NOT say "Not found" if relevant candidates exist.
-- Compare all relevant entities using evidence.
-- Rank candidates based on:
-  - certifications
-  - experience
-  - skills
-  - relevance to the question
-- Provide a clear ranking with justification.
-- If data is limited, still give the best possible ranking with a confidence score.
-
----
-
-### C) Analytical / reasoning questions
-(e.g., "Is this person suitable for X?", "Who fits best for Y role?")
-
-- Evaluate suitability using available evidence.
-- Explain reasoning briefly.
-- Provide conclusion with confidence level.
-
----
-
-### D) Ambiguous questions
-- If unclear, interpret in the most reasonable way based on context.
-- Prefer returning useful ranked or structured output instead of "Not found".
-
----
-
-## 3. Output format (STRICT)
-
-Return structured response:
-
-- Answer: final result
-- Explanation: short reasoning based on facts
-- Confidence: value from 0 to 1
-- Sources: list of supporting facts used
-
----
-
-## 4. Important constraints
-
-- NEVER hallucinate facts not present in context.
-- NEVER ignore relevant candidates in context.
-- NEVER return empty answers if useful data exists.
-- Prefer ranking over rejection when possible.
-
----
-
-## FACTS:
-${context}
-
----
-
-## QUESTION:
-${question}
-
----
-
-## ANSWER:`;
+    // replace placeholders in the externalized template
+    return this.promptTemplate
+      .replace('{context}', context)
+      .replace('{question}', question);
   }
 }

@@ -1,7 +1,7 @@
 import { CertificationsService } from './services/certifications.service';
 import { CreateCertificationDto } from './dto/create-certification.dto';
 import { UpdateCertificationDto } from './dto/update-certification.dto';
-import { CertificationsParserService } from './services/certifications-parser.service';
+import { CertificationsParserService } from './services/certifications-extraction.service';
 export declare class CertificationsController {
     private readonly service;
     private readonly parserService;

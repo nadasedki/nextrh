@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ParserService } from './parser.service';
-import { LlmService } from './llm.service';
+import { LlmService,ExtractedCertificate  } from './llm.service';
 
 @Injectable()
 export class AiService {
@@ -14,7 +14,7 @@ export class AiService {
     const { text, confidence }  = await this.ParserService.extractTextFromPdf(filePath);
 
     //  LLM
-    const data = await this.llmService.extractCertificate(text);
+     const data: ExtractedCertificate = await this.llmService.extractCertificate(text);
     
     // 3. Post-processing : Normalisation des formats de date
     if (data && !data.error) {
@@ -29,7 +29,7 @@ export class AiService {
     const { text, confidence } = await this.ParserService.extractTextFromPdf(filePath);
 
     //  LLM
-    const data = await this.llmService.extractCertificate(text);
+     const data: ExtractedCertificate = await this.llmService.extractCertificate(text);
     // 3. Post-processing : Normalisation des formats de date
     if (data && !data.error) {
       data.date_of_obtention = this.ParserService.formatDateToISO(data.date_of_obtention) || data.date_of_obtention;
@@ -37,7 +37,7 @@ export class AiService {
     }
     
     return {
-  ...data, // Contient certificate_name, provider, date_of_obtention, etc.
+  ...data,
   ocrText: text ,
   ocrConfidence: confidence,    
 }; 

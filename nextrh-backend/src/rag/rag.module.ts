@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { RagController } from './rag.controller';
 import { EmbeddingService } from './embedding/embedding.service';
 import { VectorService } from './vector/vector.service';
@@ -11,11 +11,16 @@ import { CvService } from './cv.service';
 import { RagPipelineService } from './application/rag-pipeline.service'; // Depends on Retrieval, Rerank, Prompt, LLM
 import { RagOrchestratorService } from './application/rag-orchestrator.service'; // Depends on Pipeline
 import { IndexingService } from './indexing/indexing.service';
-import { RagService } from './rag.service';
 import { EvaluationService } from './evaluation/evaluation.service';
+import { QueryPreprocessorService } from './retrieval/query-preprocessor.service';
+import { EmployeesModule } from 'src/Employee/EmployeesModule';
+import { IndexingEventListener } from './indexing/indexing-event.listener';
+import { VectorMappingRepository } from './indexing/vector-mapping.repository';
+import { EvaluationController } from './evaluation/evaluation.controller';
 
 @Module({
-  controllers: [RagController],
+imports:[ EmployeesModule],
+  controllers: [RagController,EvaluationController],
   providers: [
     EmbeddingService,
     VectorService,
@@ -28,9 +33,12 @@ import { EvaluationService } from './evaluation/evaluation.service';
     RagPipelineService,
     RagOrchestratorService,
     IndexingService,
-    RagService,
+    IndexingEventListener,     
+    VectorMappingRepository,
+    QueryPreprocessorService,
     EvaluationService,
+    
   ],
-  exports: [RagService],
+  exports: [],
 })
 export class RagModule {}

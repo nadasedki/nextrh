@@ -19,7 +19,7 @@ __decorate([
     __metadata("design:type", Number)
 ], Role.prototype, "role_id", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'enum', enum: ['EMPLOYEE', 'TEAM_LEADER', 'BID_MANAGER'], unique: true }),
+    (0, typeorm_1.Column)({ type: 'enum', enum: ['EMPLOYEE', 'TEAM_LEADER', 'BID_MANAGER', 'ADMIN'], unique: true }),
     __metadata("design:type", String)
 ], Role.prototype, "role_name", void 0);
 exports.Role = Role = __decorate([

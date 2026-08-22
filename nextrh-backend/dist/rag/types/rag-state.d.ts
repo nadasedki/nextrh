@@ -1,12 +1,18 @@
+import { VectorSearchResult, RankedResult, RagStructuredOutput } from './rag-types';
 export interface RagState {
     question: string;
-    retrieved: any[];
-    reranked: any[];
+    retrieved: VectorSearchResult[];
+    reranked: RankedResult[];
     prompt?: string;
     answer?: string;
-    metadata?: {
-        retrievalTime?: number;
-        rerankTime?: number;
-        llmTime?: number;
+    structuredAnswer?: RagStructuredOutput;
+    metadata: {
+        retrievalTimeMs: number;
+        rerankTimeMs: number;
+        promptBuildTimeMs: number;
+        llmTimeMs: number;
+        totalTimeMs: number;
+        retrievedCount: number;
+        rerankedCount: number;
     };
 }

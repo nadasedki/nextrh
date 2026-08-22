@@ -4,10 +4,10 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { CertificationsService } from './services/certifications.service';
 import { CreateCertificationDto } from './dto/create-certification.dto';
 import { UpdateCertificationDto } from './dto/update-certification.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { CertificationsParserService } from './services/certifications-parser.service';
+import { CertificationsParserService } from './services/certifications-extraction.service';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('EMPLOYEE')

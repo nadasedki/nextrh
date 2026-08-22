@@ -1,9 +1,8 @@
-import { RagPipelineService } from "./rag-pipeline.service";
+import { RagPipelineService } from './rag-pipeline.service';
+import { RagResponse } from '../types/rag-types';
 export declare class RagOrchestratorService {
-    private pipeline;
+    private readonly pipeline;
+    private readonly logger;
     constructor(pipeline: RagPipelineService);
-    ask(question: string): Promise<{
-        answer: string;
-        sources: any[];
-    }>;
+    ask(question: string): Promise<RagResponse>;
 }

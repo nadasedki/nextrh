@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { Role } from './entities/role.entity';
-import { Team } from './entities/team.entity'; 
+import { Team } from '../teams/entities/team.entity'; 
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -18,7 +18,8 @@ export class UsersService {
     @InjectRepository(Team) private teamRepo: Repository<Team>,
     @InjectRepository(Experience)
 private experienceRepo: Repository<Experience>
-  ) {}
+  ,
+private readonly dataSource: DataSource, ) {}
 
 async create(dto: RegisterDto) {
     // Fetch the single selected role using role_id from the DTO
@@ -26,7 +27,7 @@ async create(dto: RegisterDto) {
 
     const user = this.userRepo.create({
       email: dto.email,
-      password_hash: dto.password_hash,
+      password_hash: dto.password,
       full_name: dto.full_name,
       role, // Assign the singular role
     });
@@ -88,9 +89,10 @@ async create(dto: RegisterDto) {
 async remove(user_id: number) {
   const user = await this.userRepo.findOne({ where: { user_id } });
   if (!user) return null;
-  user.active = false; 
-  return this.userRepo.save(user);
+  
+   return this.userRepo.remove(user); 
 }
+
 async findTeamMembers(team_leader_id: number) {
     //  Find the team led by this leader
     const team = await this.teamRepo.findOne({ where: { team_leader_id } });
@@ -143,4 +145,24 @@ async updateYearsOfExperience(userId: number, years: number) {
 
   return years;
 }
+
+ async getGlobalAdminStats() {
+    //  Count active users 
+    const totalUsers = await this.userRepo.count({ where: { active: true } });
+
+    // B. Count teams 
+    const teamCountResult = await this.dataSource.query('SELECT COUNT(*) as count FROM teams');
+    const totalTeams = parseInt(teamCountResult[0]?.count || '0', 10);
+
+    // C. Count certifications
+    const certCountResult = await this.dataSource.query('SELECT COUNT(*) as count FROM certifications');
+    const totalCerts = parseInt(certCountResult[0]?.count || '0', 10);
+
+    return {
+      totalUsers,
+      totalTeams,
+      totalCerts,
+    
+    };
+  }
 }

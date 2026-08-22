@@ -72,6 +72,10 @@ __decorate([
     __metadata("design:type", Array)
 ], Cv.prototype, "skills", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ name: 'active_generation', default: 1 }),
+    __metadata("design:type", Number)
+], Cv.prototype, "active_generation", void 0);
+__decorate([
     (0, typeorm_1.OneToMany)(() => education_entity_1.Education, (education) => education.cv, { cascade: true }),
     __metadata("design:type", Array)
 ], Cv.prototype, "educations", void 0);

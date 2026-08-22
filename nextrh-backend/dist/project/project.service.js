@@ -19,10 +19,12 @@ const typeorm_2 = require("typeorm");
 const project_entity_1 = require("./entities/project.entity");
 const common_2 = require("@nestjs/common");
 const scoring_service_1 = require("../scoring/scoring.service");
+const event_emitter_1 = require("@nestjs/event-emitter");
 let ProjectService = class ProjectService {
-    constructor(projectRepository, scoringService) {
+    constructor(projectRepository, scoringService, eventEmitter) {
         this.projectRepository = projectRepository;
         this.scoringService = scoringService;
+        this.eventEmitter = eventEmitter;
     }
     async create(userId, createDto) {
         const { startDate, endDate, ...otherData } = createDto;
@@ -34,6 +36,10 @@ let ProjectService = class ProjectService {
         });
         const savedProject = await this.projectRepository.save(newProject);
         await this.scoringService.calculateAndSaveScore(userId);
+        this.eventEmitter.emit('project.saved', {
+            entityId: savedProject.id,
+            userId,
+        });
         return {
             ...savedProject,
             startDate: savedProject.start_date,
@@ -107,6 +113,10 @@ let ProjectService = class ProjectService {
         if (endDate)
             project.end_date = new Date(endDate);
         const saved = await this.projectRepository.save(project);
+        this.eventEmitter.emit('project.saved', {
+            entityId: id,
+            userId,
+        });
         return {
             ...saved,
             startDate: saved.start_date,
@@ -122,6 +132,10 @@ let ProjectService = class ProjectService {
         }
         await this.projectRepository.remove(project);
         await this.scoringService.calculateAndSaveScore(userId);
+        this.eventEmitter.emit('project.deleted', {
+            entityId: id,
+            userId,
+        });
     }
 };
 exports.ProjectService = ProjectService;
@@ -129,6 +143,7 @@ exports.ProjectService = ProjectService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(project_entity_1.Project)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
-        scoring_service_1.ScoringService])
+        scoring_service_1.ScoringService,
+        event_emitter_1.EventEmitter2])
 ], ProjectService);
 //# sourceMappingURL=project.service.js.map

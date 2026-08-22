@@ -1,21 +1,22 @@
+import { Repository } from 'typeorm';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { PasswordResetToken } from './entities/password-reset-token.entity';
+import { MailService } from '../mail/mail.service';
 export declare class AuthService {
-    private usersService;
-    private jwtService;
-    constructor(usersService: UsersService, jwtService: JwtService);
+    private readonly usersService;
+    private readonly jwtService;
+    private readonly mailService;
+    private readonly tokenRepository;
     private readonly logger;
-    private resetTokens;
-    sendWelcomeEmail(email: string, password: string, name: string): Promise<void>;
+    constructor(usersService: UsersService, jwtService: JwtService, mailService: MailService, tokenRepository: Repository<PasswordResetToken>);
+    sendWelcomeEmail(email: string, name: string, setupToken: string): Promise<void>;
     validateUser(email: string, password: string, requestedRole: string): Promise<any>;
-    login(loginDto: {
-        email: string;
-        password: string;
-        requestedRole: string;
-    }): Promise<{
+    login(loginDto: LoginDto): Promise<{
         access_token: string;
         user: {
             user_id: any;

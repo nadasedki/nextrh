@@ -1,28 +1,21 @@
 import { RagPipelineService } from '../application/rag-pipeline.service';
-export interface RagEvaluationInput {
-    query: string;
-    expectedDocIds: string[];
-    retrievedDocIds: string[];
-    expectedAnswer: string;
-    generatedAnswer: string;
-    retrievedContextText: string;
-}
-export interface RagEvaluationResult {
-    precisionAtK: number;
-    recallAtK: number;
-    mrr: number;
-    rougeLScore: number;
-    faithfulnessScore: number;
-    success: boolean;
-}
+import { EmbeddingService } from '../embedding/embedding.service';
+import { RagEvaluationInput, RagEvaluationResult, RagGroundTruthCase, EvaluationReport } from '../types/evaluation.types';
 export declare class EvaluationService {
     private readonly pipeline;
+    private readonly embeddingService;
     private readonly logger;
-    private readonly ROUGE_SUCCESS_THRESHOLD;
-    private readonly FAITHFULNESS_SUCCESS_THRESHOLD;
-    constructor(pipeline: RagPipelineService);
-    runEvaluationSuite(): Promise<any>;
-    evaluate(input: RagEvaluationInput, k?: number): RagEvaluationResult;
+    readonly ROUGE_SUCCESS_THRESHOLD = 0.5;
+    readonly FAITHFULNESS_SUCCESS_THRESHOLD = 0.7;
+    readonly SEMANTIC_SUCCESS_THRESHOLD = 0.75;
+    readonly GROUND_TRUTH_PATH: string;
+    private readonly OUTPUT_PATH;
+    constructor(pipeline: RagPipelineService, embeddingService: EmbeddingService);
+    getTestCase(index: number): RagGroundTruthCase | null;
+    getAllTestCases(): RagGroundTruthCase[];
+    runEvaluationSuite(): Promise<EvaluationReport>;
+    evaluate(input: RagEvaluationInput, textForFaithfulness?: string, precomputedExpectedVec?: number[]): Promise<RagEvaluationResult>;
+    private calculateCosineSimilarity;
     private calculatePrecisionAtK;
     private calculateRecallAtK;
     private calculateMRR;

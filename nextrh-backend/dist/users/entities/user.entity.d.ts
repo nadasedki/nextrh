@@ -1,5 +1,5 @@
 import { Role } from './role.entity';
-import { Team } from './team.entity';
+import { Team } from '../../teams/entities/team.entity';
 import { Certification } from 'src/certifications/entities/certification.entity';
 import { Project } from 'src/project/entities/project.entity';
 import { Training } from 'src/training/entities/training.entity';

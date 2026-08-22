@@ -1,6 +1,6 @@
-import { Controller, Post, Body, UseGuards, Req, UploadedFile, UseInterceptors, BadRequestException, Logger, InternalServerErrorException } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req, UploadedFile, UseInterceptors, BadRequestException, Logger, InternalServerErrorException, Delete, Param } from '@nestjs/common';
 import { CvService } from './cv.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CvImportService } from './cv-import/cv-import.service';
 
@@ -10,19 +10,7 @@ export class CvController {
   constructor(private readonly cvService: CvService,
     private readonly cvImportService: CvImportService
   ) {}
-/*
-  @UseGuards(JwtAuthGuard)
-  @Post('upload')
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadCv(@Req() req, @UploadedFile() file: Express.Multer.File, @Body() body: any) {
-    if (!file) throw new BadRequestException('No file uploaded');
 
-    const userId = req.user.userId;
-    const cvJson = body.cvJson; // assume client sends parsed JSON
-    const savedCv = await this.cvService.saveIdentityCv(userId, file.path, cvJson);
-
-    return { status: 'success', data: savedCv };
-  }*/
  @UseGuards(JwtAuthGuard)
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
@@ -32,14 +20,14 @@ export class CvController {
       throw new BadRequestException('Aucun fichier n\'a été fourni. Veuillez téléverser un CV au format PDF.');
     }
 
-    // 3. Guard Clause: Strict check for PDF mimetype
+    // 3. Guard Clause:  check for PDF mimetype
     if (file.mimetype !== 'application/pdf') {
       this.logger.warn(`Unsupported upload attempt with mimetype: ${file.mimetype}`);
       throw new BadRequestException('Type de fichier non supporté. Seurs les fichiers PDF sont acceptés.');
     }
 
     try {
-      // 4. Retrieve real dynamic parameters from the JWT Auth Payload
+      // 4. Retrieve from the JWT Auth Payload
       const userId = req.user.userId; 
       this.logger.log(`Initiating parsing pipeline for user ${userId} with file: ${file.originalname}`);
 
@@ -55,5 +43,28 @@ export class CvController {
       );
     }
   }
+@UseGuards(JwtAuthGuard)
+@Delete(':cvId')
+async removeCv(
+  @Param('cvId') cvId: string,
+  @Req() req,
+): Promise<{ message: string }> {
+  const userId = req.user.userId;
 
+  const cvIdNumber = Number(cvId);
+
+  if (!Number.isInteger(cvIdNumber) || cvIdNumber <= 0) {
+    throw new BadRequestException('Identifiant du CV invalide.');
+  }
+
+  this.logger.log(
+    `Deleting CV ${cvIdNumber} for user ${userId}`,
+  );
+
+  await this.cvService.remove(cvIdNumber, userId);
+
+  return {
+    message: 'CV supprimé avec succès.',
+  };
+}
 }

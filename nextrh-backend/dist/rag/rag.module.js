@@ -20,14 +20,19 @@ const cv_service_1 = require("./cv.service");
 const rag_pipeline_service_1 = require("./application/rag-pipeline.service");
 const rag_orchestrator_service_1 = require("./application/rag-orchestrator.service");
 const indexing_service_1 = require("./indexing/indexing.service");
-const rag_service_1 = require("./rag.service");
 const evaluation_service_1 = require("./evaluation/evaluation.service");
+const query_preprocessor_service_1 = require("./retrieval/query-preprocessor.service");
+const EmployeesModule_1 = require("../Employee/EmployeesModule");
+const indexing_event_listener_1 = require("./indexing/indexing-event.listener");
+const vector_mapping_repository_1 = require("./indexing/vector-mapping.repository");
+const evaluation_controller_1 = require("./evaluation/evaluation.controller");
 let RagModule = class RagModule {
 };
 exports.RagModule = RagModule;
 exports.RagModule = RagModule = __decorate([
     (0, common_1.Module)({
-        controllers: [rag_controller_1.RagController],
+        imports: [EmployeesModule_1.EmployeesModule],
+        controllers: [rag_controller_1.RagController, evaluation_controller_1.EvaluationController],
         providers: [
             embedding_service_1.EmbeddingService,
             vector_service_1.VectorService,
@@ -40,10 +45,12 @@ exports.RagModule = RagModule = __decorate([
             rag_pipeline_service_1.RagPipelineService,
             rag_orchestrator_service_1.RagOrchestratorService,
             indexing_service_1.IndexingService,
-            rag_service_1.RagService,
+            indexing_event_listener_1.IndexingEventListener,
+            vector_mapping_repository_1.VectorMappingRepository,
+            query_preprocessor_service_1.QueryPreprocessorService,
             evaluation_service_1.EvaluationService,
         ],
-        exports: [rag_service_1.RagService],
+        exports: [],
     })
 ], RagModule);
 //# sourceMappingURL=rag.module.js.map

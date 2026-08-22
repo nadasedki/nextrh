@@ -12,6 +12,7 @@ import { BIDDashboard, EmployeeDirectoryPage, AIChatPage, CVGenerationPage } fro
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./contexts/ResetPassword";
 import ForgotPassword from "./contexts/ForgotPassword";
+import {  AdminUserManagement } from "./pages/admin";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,13 @@ const App = () => (
               <Route path="/bid/ai-chat" element={<AIChatPage />} />
               <Route path="/bid/cv-generation" element={<CVGenerationPage />} />
             </Route>
+
+             {/* NEW: Admin Routes */}
+            <Route element={<MainLayout requiredRole="admin" />}>
+              <Route path="/admin/employee/:id" element={<MemberProfilePage />} />
+              <Route path="/admin/users" element={<AdminUserManagement />} /> 
+              
+               </Route>
 
             <Route path="*" element={<NotFound />} />
           </Routes>

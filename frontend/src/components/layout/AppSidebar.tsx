@@ -1,3 +1,4 @@
+// src/components/layout/AppSidebar.tsx
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -31,6 +32,7 @@ import {
   LogOut,
   Settings,
   ChevronRight,
+  Shield, // 1. Added Shield icon import
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -70,6 +72,12 @@ const bidManagerNavItems: NavItem[] = [
   { title: 'Generate CV', url: '/bid/cv-generation', icon: FileOutput },
 ];
 
+// 2. Added navigation configurations specifically for the Administrator role
+const adminNavItems: NavItem[] = [
+ // { title: 'Admin Dashboard', url: '/admin/dashboard', icon: LayoutDashboard },
+  { title: 'User Management', url: '/admin/users', icon: Users }, 
+];
+
 export const AppSidebar: React.FC = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -83,6 +91,8 @@ export const AppSidebar: React.FC = () => {
         return managerNavItems;
       case 'bid_manager':
         return bidManagerNavItems;
+      case 'admin': // 3. Maps 'admin' role to admin navigation list
+        return adminNavItems;
       default:
         return [];
     }
@@ -96,6 +106,8 @@ export const AppSidebar: React.FC = () => {
         return 'Team Manager';
       case 'bid_manager':
         return 'BID Manager';
+      case 'admin': // 4. Maps 'admin' to professional header string
+        return 'Administrator';
       default:
         return 'Portal';
     }
@@ -113,8 +125,13 @@ export const AppSidebar: React.FC = () => {
     <Sidebar className="border-r-0">
       <SidebarHeader className="border-b border-sidebar-border px-4 py-4">
         <div className="flex items-center gap-3">
+          {/* Header Icon changes based on Administrator role */}
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-            <FileText className="h-5 w-5" />
+            {user?.role === 'admin' ? (
+              <Shield className="h-5 w-5" />
+            ) : (
+              <FileText className="h-5 w-5" />
+            )}
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-semibold text-sidebar-foreground">NEXTRH</span>
@@ -171,25 +188,23 @@ export const AppSidebar: React.FC = () => {
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-xs">
                   {user?.name
-                    .split(' ')
-                    .map((n) => n[0])
-                    .join('')}
+                    ? user.name
+                        .split(' ')
+                        .map((n) => n[0])
+                        .join('')
+                    : 'A'}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-1 flex-col items-start text-left">
                 <span className="text-sm font-medium">{user?.name}</span>
-                <span className="text-xs text-sidebar-foreground/60">{user?.title}</span>
+                <span className="text-xs text-sidebar-foreground/60">{user?.title || 'System Account'}</span>
               </div>
               <ChevronRight className="h-4 w-4 text-sidebar-foreground/50" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 bg-popover">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </DropdownMenuItem>
+           
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
               <LogOut className="mr-2 h-4 w-4" />

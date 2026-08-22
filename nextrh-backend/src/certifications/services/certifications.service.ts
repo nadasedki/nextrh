@@ -10,34 +10,99 @@ import { Certification } from '../entities/certification.entity';
 import { CreateCertificationDto } from '../dto/create-certification.dto';
 import { UpdateCertificationDto } from '../dto/update-certification.dto';
 import { AiService } from 'src/parser/ai.service';
-import * as fs from 'fs';
+import * as fs from 'fs/promises';
 import * as path from 'path';
 import { Cv } from 'src/cvs/entities/cv.entity';
 import { User } from 'src/users/entities/user.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class CertificationsService {
- 
+private readonly certUploadDir: string;
+
+
   constructor(
     @InjectRepository(Certification)
     private readonly certificationRepo: Repository<Certification>,
     private readonly aiService: AiService,
-   private eventEmitter: EventEmitter2,
-  ) {}
+    private readonly configService: ConfigService,
+    private eventEmitter: EventEmitter2,
+  ) {
+      const configuredPath = this.configService.get<string>('UPLOAD_CERT_DESTINATION') || './uploads/certifications';
+    
+    this.certUploadDir = path.isAbsolute(configuredPath)
+      ? configuredPath
+      : path.join(process.cwd(), configuredPath);
+
+  }
+  async saveCertFileToDisk(fileBuffer: Buffer, employeeId: number, originalName: string): Promise<string> {
+  await fs.mkdir(this.certUploadDir, { recursive: true });
+  const ext = path.extname(originalName) || '.pdf';
+  const fileName = `cert-${employeeId}-${Date.now()}${ext}`;
+  const fullPath = path.join(this.certUploadDir, fileName);
+  await fs.writeFile(fullPath, fileBuffer);
+  return `uploads/certifications/${fileName}`;
+}
 
   async findMyCertifications(employeeId: number) {
     const certs = await this.certificationRepo.find({
       where: { userId: employeeId },
       order: { expiryDate: 'ASC' },
-      relations: ['user'], // Load user to map user_id safely if needed
+      relations: ['user'], 
     });
     
-    // Map to Frontend format if necessary, or return as is
+
     return certs;
   }
+async create(
+  employeeId: number,
+  dto: CreateCertificationDto,
+  fileBuffer?: Buffer,      
+  originalName?: string,    
+) {
+  if (!dto.name || !dto.issuer) {
+    throw new BadRequestException('Name and Issuer are required');
+  }
 
-  async create(employeeId: number, dto: CreateCertificationDto) {
+  
+  let savedFilePath: string | null = dto.filePath || null;
+  if (fileBuffer && originalName) {
+    savedFilePath = await this.saveCertFileToDisk(fileBuffer, employeeId, originalName);
+  }
+
+  const targetExpiry = dto.expirationDate ? new Date(dto.expirationDate) : null;
+  const calculatedStatus = this.calculateStatus(targetExpiry);
+
+  
+  const certification = this.certificationRepo.create({
+    certName: dto.name,
+    provider: dto.issuer,
+    issueDate: dto.issueDate ? new Date(dto.issueDate) : null,
+    expiryDate: targetExpiry,
+    credentialId: dto.credentialId,
+    status: calculatedStatus,
+    userId: employeeId,
+    filePath: savedFilePath, 
+  });
+
+  const savedCert = await this.certificationRepo.save(certification);
+
+  this.eventEmitter.emit('certification.saved', {
+    certId: savedCert.certId,
+    employeeId: employeeId,
+    certName: savedCert.certName,
+    expiryDate: savedCert.expiryDate,
+  });
+
+  this.eventEmitter.emit('certification.index_saved', {
+    entityId: savedCert.certId,
+    userId: employeeId,
+  });
+
+  return savedCert;
+}
+ /* async create(employeeId: number, dto: CreateCertificationDto) {
     if (!dto.name || !dto.issuer) {
       throw new BadRequestException('Name and Issuer are required');
     }
@@ -45,13 +110,12 @@ const targetExpiry = dto.expirationDate ? new Date(dto.expirationDate) : null;
 const calculatedStatus = this.calculateStatus(targetExpiry);
 
     const certification = this.certificationRepo.create({
-      certName: dto.name,            // Updated property name
+      certName: dto.name,           
       provider: dto.issuer,          
       issueDate: dto.issueDate ? new Date(dto.issueDate) : null,
       expiryDate: targetExpiry,
       credentialId: dto.credentialId,
       status: calculatedStatus,
-      //user: { user_id: employeeId } as any
       userId: employeeId,
       filePath: dto.filePath || null,
 
@@ -59,7 +123,6 @@ const calculatedStatus = this.calculateStatus(targetExpiry);
 
      const savedCert = await this.certificationRepo.save(certification);
      
- //3. ÉMISSION DE L'ÉVÉNEMENT (On envoie un "paquet" d'infos au Listener)
     this.eventEmitter.emit('certification.saved', { 
       certId: savedCert.certId,
       employeeId: employeeId, 
@@ -67,8 +130,12 @@ const calculatedStatus = this.calculateStatus(targetExpiry);
       expiryDate: savedCert.expiryDate 
     });
 
+     this.eventEmitter.emit('certification.index_saved', { 
+      entityId: savedCert.certId,
+      userId: employeeId, 
+    });
   return savedCert;
-  }
+  }*/
 
   async update(id: number, employeeId: number, dto: UpdateCertificationDto) {
     if (Object.keys(dto).length === 0) {
@@ -76,7 +143,7 @@ const calculatedStatus = this.calculateStatus(targetExpiry);
     }
 
     const certification = await this.certificationRepo.findOne({
-      where: { certId: id }, // Updated to 'certId'
+      where: { certId: id }, 
       relations: ['user'],
     });
 
@@ -88,7 +155,7 @@ const calculatedStatus = this.calculateStatus(targetExpiry);
       throw new ForbiddenException('You cannot modify this certification');
     }
 
-    // Mapping
+   
     if (dto.name) certification.certName = dto.name;
     if (dto.issuer) certification.provider = dto.issuer;
     if (dto.issueDate) certification.issueDate = new Date(dto.issueDate);
@@ -103,15 +170,57 @@ const calculatedStatus = this.calculateStatus(targetExpiry);
     certification.status = dto.status;
   }
       const updatedCert = await this.certificationRepo.save(certification);
- //  ENVOI DE L'ÉVÉNEMENT (Correspond au type CertificationEventPayload du Listener)
-    this.eventEmitter.emit('certification.updated', { 
+ 
+      this.eventEmitter.emit('certification.updated', { 
       employeeId: employeeId, 
       certId: updatedCert.certId, 
     });
+      this.eventEmitter.emit('certification.index_saved', { 
+      entityId: updatedCert.certId,
+      userId: employeeId, 
+    });
+
      return updatedCert;
   }
+async remove(id: number, employeeId: number) {
+  const certification = await this.certificationRepo.findOne({
+    where: { certId: id },
+    relations: ['user'],
+  });
 
-  async remove(id: number, employeeId: number) {
+  if (!certification) {
+    throw new NotFoundException('Certification not found');
+  }
+
+  if (certification.userId !== employeeId) {
+    throw new ForbiddenException('You cannot delete this certification');
+  }
+
+  // 1. Delete the physical certificate file from disk (if it has its own dedicated file)
+  if (certification.filePath && !certification.filePath.includes('uploads/cvs/')) {
+    try {
+      const fullPath = path.join(process.cwd(), certification.filePath);
+      await fs.unlink(fullPath);
+    } catch (err) {
+      // Ignore if file doesn't exist on disk
+    }
+  }
+
+  // 2. Remove from database
+  await this.certificationRepo.remove(certification);
+
+  // 3. Emit events cleanly
+  this.eventEmitter.emit('certification.deleted', {
+    employeeId: employeeId,
+    certId: id,
+  });
+
+  this.eventEmitter.emit('certification.index_deleted', {
+    entityId: id,
+    userId: employeeId,
+  });
+}
+  /*async remove(id: number, employeeId: number) {
     const certification = await this.certificationRepo.findOne({
       where: { certId: id }, 
       relations: ['user'],
@@ -131,18 +240,21 @@ const calculatedStatus = this.calculateStatus(targetExpiry);
       employeeId: employeeId, 
       certId: id 
     });
-  }
+
+     this.eventEmitter.emit('certification.index_deleted', { 
+      entityId: id,
+      userId: employeeId, 
+    });
+  }*/
  async createBulkFromParsedData(certsData: any[], userId: number, filePath?: string, cvEntity?: Cv) {
     if (!certsData || certsData.length === 0) return [];
 
     const entities = certsData.map((cert) => {
       return this.certificationRepo.create({
         certName: cert.certName,
-        // We infer the provider from the name or default to 'Specified in cert'
-        provider: cert.provider,
-        issueDate: cert.issueDate,
-        expiryDate: null, // Usually not clearly parsed as a single date from CVs
-        status: 'active',
+         provider: cert.provider,
+        issueDate: cert.issue_date ,
+        expiryDate: cert.expiry_date , 
         userId: userId,
         filePath: filePath || null,
         cv: cvEntity, 
@@ -151,32 +263,7 @@ const calculatedStatus = this.calculateStatus(targetExpiry);
 
     return await this.certificationRepo.save(entities);
   }
-  // This method is called from AiService after extracting cert data from Certif file alone 
-  
-
-//code to save certificate data to DB
-
-/*
-private calculateStatus(expirationDate: string | null) {
-  if (!expirationDate) return 'active';
-
-  const today = new Date();
-  const expiry = new Date(expirationDate);
-
-  if (isNaN(expiry.getTime())) return 'active';
-
-  if (expiry < today) return 'expired';
-
-  const diffDays =
-    (expiry.getTime() - today.getTime()) / (1000 * 3600 * 24);
-
-  if (diffDays <= 30) return 'expiring_soon';
-
-  return 'active';
-}
-  */
-// This method is called from CvParsingService after parsing cert data from CVs
-
+ 
 
   /**
    * Helper: Converts "Février 2020" to a JavaScript Date object
@@ -246,99 +333,6 @@ async evaluateAllCertificationsStatus(): Promise<{ updatedCount: number }> {
 
   return { updatedCount };
 }
-/*private async syncToCalendar(userId: number, cert: Certification) {
-  try {
-    // 1. Récupérer les infos de l'employé (nom et email)
-    const user = await this.userRepo.findOne({ where: { user_id: userId } });
-
-    if (user && user.email && cert.expiryDate) {
-      // 2. Appeler le service Google Calendar
-      await this.googleCalendarService.scheduleEmployeeReminder(
-        user.full_name,
-        user.email,
-        cert.certName,
-        cert.expiryDate.toISOString(), // On envoie la date au format string
-      );
-      console.log(` Synchro Agenda réussie pour ${user.email}`);
-    }
-  } catch (err) {
-    console.error(" Erreur de synchronisation Agenda:", err.message);
-  }
-}
-  
 
 
-private mapAiToEntity(aiData: any, filePath: string) {
-  const status = this.calculateStatus(aiData.date_of_expiration);
-
-  return {
-    certName: aiData.certificate_name,    
-    provider: aiData.provider,
-    issueDate: aiData.date_of_obtention ? new Date(aiData.date_of_obtention) : null,
-    expiryDate: aiData.date_of_expiration ? new Date(aiData.date_of_expiration) : null,
-    credentialId: aiData.credential_id || null,
-    status,
-    filePath,
-  };
-}
- async extractAndSaveCertificate(
-  employeeId: number,
-  file: Express.Multer.File,
-) {
-  try {
-    // -----------------------------
-    //  Create user folder
-    // -----------------------------
-    const userFolder = path.join(
-      process.cwd(),
-      'uploads',
-      `user_${employeeId}`,
-    );
-
-    if (!fs.existsSync(userFolder)) {
-      fs.mkdirSync(userFolder, { recursive: true });
-    }
-
-    // -----------------------------
-    // Save file
-    // -----------------------------
-    const filePath = path.join(userFolder, file.originalname);
-    fs.writeFileSync(filePath, file.buffer);
-
-    // -----------------------------
-    //  Call AI Service
-    // -----------------------------
-    const aiData = await this.aiService.extractCertificate(filePath);
-    // Ensure we use the first object if LLM returned an array
-    const certificateObj = Array.isArray(aiData) ? aiData[0] : aiData;
-    if (!certificateObj || Object.keys(certificateObj).length === 0) {
-      throw new Error('AI returned empty data');
-    }
-
-    console.log('AI Data:', certificateObj);
-
-    // -----------------------------
-    //  Map AI → DTO
-    // -----------------------------
-    const entityData = this.mapAiToEntity(certificateObj, filePath);
-
-    // -----------------------------
-    //  Save to Database
-    // -----------------------------
-    
-   const savedCert = await this.create(employeeId, {
-      name: entityData.certName,
-      issuer: entityData.provider,
-      issueDate: entityData.issueDate ? entityData.issueDate.toISOString() : null,
-      expirationDate: entityData.expiryDate ? entityData.expiryDate.toISOString() : null,
-      credentialId: entityData.credentialId,
-      status: entityData.status as 'active' | 'expired' | 'expiring_soon',
-      filePath: entityData.filePath,
-    });
-   return savedCert; 
-  } catch (error) {
-    console.error('Error saving certificate:', error.message);
-    throw error;
-  }
-}*/
 }

@@ -8,7 +8,7 @@ export declare class ParserController {
     constructor(parserService: ParserService, AiService: AiService, metricsService: EvaluationMetricsService);
     extractCertificate(body: any): Promise<{
         status: string;
-        data: any;
+        data: import("./llm.service").ExtractedCertificate;
         message?: undefined;
     } | {
         status: string;

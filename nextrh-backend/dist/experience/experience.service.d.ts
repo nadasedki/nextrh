@@ -1,9 +1,11 @@
 import { Repository } from 'typeorm';
 import { Experience } from './entities/experience.entity';
 import { Cv } from 'src/cvs/entities/cv.entity';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 export declare class ExperienceService {
     private readonly experienceRepo;
-    constructor(experienceRepo: Repository<Experience>);
+    private readonly eventEmitter;
+    constructor(experienceRepo: Repository<Experience>, eventEmitter: EventEmitter2);
     createBulkFromParsedData(expData: any[], userId: number, cvEntity?: Cv): Promise<Experience[]>;
     private parsePeriod;
     create(data: any): Promise<{

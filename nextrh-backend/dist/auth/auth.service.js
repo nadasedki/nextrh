@@ -41,79 +41,57 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 var AuthService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
+const typeorm_1 = require("@nestjs/typeorm");
+const typeorm_2 = require("typeorm");
 const users_service_1 = require("../users/users.service");
-const bcrypt = __importStar(require("bcrypt"));
 const jwt_1 = require("@nestjs/jwt");
+const password_reset_token_entity_1 = require("./entities/password-reset-token.entity");
+const mail_service_1 = require("../mail/mail.service");
 const uuid_1 = require("uuid");
-const nodemailer = __importStar(require("nodemailer"));
+const crypto_1 = require("crypto");
+const bcrypt = __importStar(require("bcrypt"));
 let AuthService = AuthService_1 = class AuthService {
-    constructor(usersService, jwtService) {
+    constructor(usersService, jwtService, mailService, tokenRepository) {
         this.usersService = usersService;
         this.jwtService = jwtService;
+        this.mailService = mailService;
+        this.tokenRepository = tokenRepository;
         this.logger = new common_1.Logger(AuthService_1.name);
-        this.resetTokens = new Map();
     }
-    async sendWelcomeEmail(email, password, name) {
-        const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: Number(process.env.SMTP_PORT),
-            secure: false,
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-        });
-        try {
-            await transporter.verify();
-            await transporter.sendMail({
-                from: `"NextStep HR Portal" <${process.env.EMAIL_FROM}>`,
-                to: email,
-                subject: 'Bienvenue dans l\'équipe - Vos accès',
-                html: `
-          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
-            <h2 style="color: #2563eb; text-align: center;">Bienvenue chez NextStep IT !</h2>
-            <p>Bonjour <strong>${name}</strong>,</p>
-            <p>Un compte collaborateur a été créé pour vous par votre Team Leader.</p>
-            <div style="background-color: #f8fafc; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0;">
-              <p style="margin: 5px 0;"><strong>Lien de connexion :</strong> <a href="http://localhost:8080/login">Portail RH</a></p>
-              <p style="margin: 5px 0;"><strong>Identifiant :</strong> ${email}</p>
-              <p style="margin: 5px 0;"><strong>Mot de passe temporaire :</strong> <code>${password}</code></p>
-            </div>
-            <p style="font-size: 0.9em; color: #666;">Par mesure de sécurité, merci de modifier ce mot de passe lors de votre première connexion.</p>
-            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-            <p style="text-align: center; font-size: 0.8em; color: #aaa;">Ceci est un message automatique du système RH NextStep.</p>
-          </div>
-        `,
-            });
-            this.logger.log(`✅ Email envoyé avec succès à ${email}`);
-        }
-        catch (error) {
-            this.logger.error(`❌ Erreur d'envoi : ${error.message}`);
-            if (error.message.includes('535')) {
-                this.logger.error("Vérifiez que vous utilisez bien la clé de l'onglet SMTP et non l'onglet API !");
-            }
-        }
+    async sendWelcomeEmail(email, name, setupToken) {
+        await this.mailService.sendWelcomeEmail(email, name, setupToken);
     }
     async validateUser(email, password, requestedRole) {
         const user = await this.usersService.findByEmail(email);
         if (!user)
-            throw new common_1.UnauthorizedException('User with this email does not exist');
+            throw new common_1.UnauthorizedException('This email does not exist.');
+        if (user.active === false) {
+            throw new common_1.UnauthorizedException('Your account has been deactivated. Please contact your system administrator.');
+        }
         const isPasswordValid = await bcrypt.compare(password, user.password_hash);
         if (!isPasswordValid)
-            throw new common_1.UnauthorizedException('Password is incorrect');
+            throw new common_1.UnauthorizedException('Incorrect password.');
         const hasRole = user.role?.role_name === requestedRole;
         if (!hasRole)
-            throw new common_1.UnauthorizedException('Role not assigned to user');
+            throw new common_1.UnauthorizedException('The requested role is not assigned to you');
         return user;
     }
     async login(loginDto) {
         const { email, password, requestedRole } = loginDto;
         const user = await this.validateUser(email, password, requestedRole);
-        const payload = { sub: user.user_id, email: user.email, role: requestedRole, full_name: user.full_name };
+        const payload = {
+            sub: user.user_id,
+            email: user.email,
+            role: requestedRole,
+            full_name: user.full_name
+        };
         return {
             access_token: this.jwtService.sign(payload),
             user: {
@@ -126,50 +104,56 @@ let AuthService = AuthService_1 = class AuthService {
         };
     }
     async register(dto) {
-        const hashedPassword = await bcrypt.hash(dto.password_hash, 10);
-        return this.usersService.create({ ...dto, password_hash: hashedPassword });
+        const existingUser = await this.usersService.findByEmail(dto.email);
+        if (existingUser) {
+            throw new common_1.ConflictException('This email address is already registered in the system.');
+        }
+        const hashedPassword = await bcrypt.hash(dto.password, 10);
+        return this.usersService.create({
+            email: dto.email,
+            full_name: dto.full_name,
+            role_id: dto.role_id,
+            password: hashedPassword,
+        });
     }
     async forgotPassword(dto) {
         const { email } = dto;
         const user = await this.usersService.findByEmail(email);
-        if (!user)
-            throw new common_1.NotFoundException('User not found');
+        if (!user) {
+            return { message: 'If an account exists with this email, a password reset link has been sent.' };
+        }
         const token = (0, uuid_1.v4)();
-        this.resetTokens.set(token, { userId: user.user_id, expires: Date.now() + 3600000 });
-        const transporter = nodemailer.createTransport({
-            host: 'smtp-relay.brevo.com',
-            port: 465,
-            secure: true,
-            auth: {
-                user: process.env.SMTP_USER?.trim(),
-                pass: process.env.SMTP_PASS?.trim(),
-            },
+        const tokenHash = (0, crypto_1.createHash)('sha256').update(token).digest('hex');
+        const expiresAt = new Date(Date.now() + 3600000);
+        await this.tokenRepository.save({
+            token_hash: tokenHash,
+            user_id: user.user_id,
+            expires_at: expiresAt,
         });
-        const resetLink = `http://localhost:8080/reset-password?token=${token}`;
-        await transporter.sendMail({
-            from: `"NextStep Support" <${process.env.EMAIL_FROM}>`,
-            to: email,
-            subject: 'Réinitialisation de votre mot de passe',
-            html: `<p>Cliquez ici pour changer votre mot de passe : <a href="${resetLink}">${resetLink}</a></p>`,
-        });
-        return { message: 'Email de réinitialisation envoyé' };
+        await this.mailService.sendResetPasswordEmail(user.email, user.full_name, token);
+        return { message: 'If an account exists with this email, a password reset link has been sent.' };
     }
     async resetPassword(dto) {
         const { token, newPassword } = dto;
-        const data = this.resetTokens.get(token);
-        if (!data || data.expires < Date.now()) {
-            throw new common_1.BadRequestException('Lien invalide ou expiré');
+        const tokenHash = (0, crypto_1.createHash)('sha256').update(token).digest('hex');
+        const tokenRecord = await this.tokenRepository.findOne({ where: { token_hash: tokenHash } });
+        if (!tokenRecord || tokenRecord.used || tokenRecord.expires_at < new Date()) {
+            throw new common_1.BadRequestException('Invalid or expired reset link.');
         }
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        await this.usersService.updatePassword(data.userId, hashedPassword);
-        this.resetTokens.delete(token);
-        return { message: 'Mot de passe mis à jour avec succès' };
+        await this.usersService.updatePassword(tokenRecord.user_id, hashedPassword);
+        tokenRecord.used = true;
+        await this.tokenRepository.save(tokenRecord);
+        return { message: 'Password updated successfully' };
     }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = AuthService_1 = __decorate([
     (0, common_1.Injectable)(),
+    __param(3, (0, typeorm_1.InjectRepository)(password_reset_token_entity_1.PasswordResetToken)),
     __metadata("design:paramtypes", [users_service_1.UsersService,
-        jwt_1.JwtService])
+        jwt_1.JwtService,
+        mail_service_1.MailService,
+        typeorm_2.Repository])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

@@ -1,79 +1,88 @@
-import { Controller, Post, Body, Get, UseGuards ,Req } from '@nestjs/common';
+// src/teams/teams.controller.ts
+import { 
+  Controller, 
+  Post, 
+  Body, 
+  Get, 
+  UseGuards, 
+  Param, 
+  ParseIntPipe,
+  Delete
+} from '@nestjs/common';
 import { TeamsService } from './teams.service';
 import { CreateTeamDto } from './dto/create-team.dto';
-import { AddMemberDto } from 'src/teams/dto/add-member.dto';
-import { RolesGuard } from '../auth/roles.guard';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { Roles } from 'src/auth/roles.decorator';
-import { Param, ParseIntPipe } from '@nestjs/common';
+import { InviteMemberDto } from './dto/invite-member.dto';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Roles } from '../auth/roles.decorator';
+
+// Custom lightweight inline decorator to safely retrieve user from Request
+import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+export const CurrentUser = createParamDecorator(
+  (data: unknown, ctx: ExecutionContext) => {
+    const request = ctx.switchToHttp().getRequest();
+    return request.user;
+  },
+);
 
 @Controller('teams')
 export class TeamsController {
   constructor(private readonly teamsService: TeamsService) {}
- // POST /teams
+
   @Post()
   create(@Body() dto: CreateTeamDto) {
     return this.teamsService.create(dto);
   }
- // POST /teams
+
   @Get()
   findAll() {
     return this.teamsService.findAll();
   }
-  /*@UseGuards(JwtAuthGuard, RolesGuard)
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('TEAM_LEADER')
-  @Post('add-member')
-  addMember(@Body() dto: AddMemberDto) {
-    return this.teamsService.addMember(dto);
-  }*/
- 
-
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('TEAM_LEADER')
-@Post('members') // matches your frontend fetch path
-async addMember(@Req() req: any, @Body('email') email: string) {
-  const leaderId = req.user.sub;
-  return this.teamsService.addMemberByEmail(leaderId, email);
-}
+  @Post('members')
+  async addMember(@CurrentUser() user: any, @Body() dto: InviteMemberDto) {
+    return this.teamsService.addMemberByEmail(user.userId, dto.email); // Safe userId passing
+  }
   
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('TEAM_LEADER')
-@Get('my-team')
-async getMyTeam(@Req() req: any) {  // <-- use any here
-  const leaderId = req.user.sub; // JWT payload 'sub' = user_id
-  return this.teamsService.getMyTeam(leaderId);
-}
-//remove team member
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('TEAM_LEADER')
-@Post('remove-member')
-removeMember(@Body() dto: AddMemberDto) {
-  return this.teamsService.removeMember(dto);
-}
-@Get(':id')
-findOne(@Param('id', ParseIntPipe) id: number) {
-  return this.teamsService.findOne(id);
-}
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('TEAM_LEADER')
+  @Get('my-team')
+  async getMyTeam(@CurrentUser() user: any) {
+    return this.teamsService.getMyTeam(user.userId);
+  }
 
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('TEAM_LEADER')
-@Get('my-team/members')
-async getMyTeamMembers(@Req() req: any) {
-  const leaderId = req.user.sub;
-  return this.teamsService.findMembersByManager(leaderId);
-}
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('TEAM_LEADER')
-@Get('my-team/stats')
-async getMyTeamStats(@Req() req: any) {
-  const leaderId = req.user.sub;
-  return this.teamsService.calculateTeamStats(leaderId);
-}
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('TEAM_LEADER')
-@Get('my-team/certifications')
-async getMyTeamCertifications(@Req() req: any) {
-  const leaderId = req.user.sub;
-  return this.teamsService.findAllTeamCertifications(leaderId);
-}
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('TEAM_LEADER')
+  @Delete('members/:id') 
+  async removeMember(@CurrentUser() user: any, @Param('id', ParseIntPipe) memberId: number) {
+    return this.teamsService.removeMemberFromLeaderTeam(user.userId, memberId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('TEAM_LEADER')
+  @Get('my-team/members')
+  async getMyTeamMembers(@CurrentUser() user: any) {
+    return this.teamsService.findMembersByManager(user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('TEAM_LEADER')
+  @Get('my-team/stats')
+  async getMyTeamStats(@CurrentUser() user: any) {
+    return this.teamsService.calculateTeamStats(user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('TEAM_LEADER')
+  @Get('my-team/certifications')
+  async getMyTeamCertifications(@CurrentUser() user: any) {
+    return this.teamsService.findAllTeamCertifications(user.userId);
+  }
+
+  @Get(':id')
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.teamsService.findOne(id);
+  }
 }

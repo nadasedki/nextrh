@@ -8,17 +8,24 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CvGeneratorModule = void 0;
 const common_1 = require("@nestjs/common");
-const cv_generator_service_1 = require("./cv-generator.service");
 const cv_generator_controller_1 = require("./cv-generator.controller");
-const cv_module_1 = require("../cvs/cv.module");
+const pdf_generator_service_1 = require("./pdf-generator.service");
+const employeeProfile_service_1 = require("../Employee/employeeProfile.service");
+const cv_template_service_1 = require("./cv-template.service");
+const cv_data_formatter_service_1 = require("./cv-data-formatter.service");
 let CvGeneratorModule = class CvGeneratorModule {
 };
 exports.CvGeneratorModule = CvGeneratorModule;
 exports.CvGeneratorModule = CvGeneratorModule = __decorate([
     (0, common_1.Module)({
-        imports: [cv_module_1.CvModule],
-        providers: [cv_generator_service_1.CvGeneratorService],
-        controllers: [cv_generator_controller_1.CvGeneratorController]
+        imports: [],
+        controllers: [cv_generator_controller_1.CvGeneratorController],
+        providers: [
+            pdf_generator_service_1.PdfGeneratorService,
+            cv_template_service_1.CvTemplateService,
+            cv_data_formatter_service_1.CvDataFormatterService,
+            employeeProfile_service_1.EmployeeProfileService,
+        ],
     })
 ], CvGeneratorModule);
 //# sourceMappingURL=cv-generator.module.js.map

@@ -16,8 +16,8 @@ exports.ProjectsController = void 0;
 const common_1 = require("@nestjs/common");
 const project_service_1 = require("./project.service");
 const create_project_dto_1 = require("./dto/create-project.dto");
-const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
-const roles_guard_1 = require("../auth/roles.guard");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../auth/guards/roles.guard");
 const roles_decorator_1 = require("../auth/roles.decorator");
 let ProjectsController = class ProjectsController {
     constructor(projectsService) {

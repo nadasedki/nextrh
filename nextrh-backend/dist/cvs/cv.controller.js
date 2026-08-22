@@ -16,7 +16,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CvController = void 0;
 const common_1 = require("@nestjs/common");
 const cv_service_1 = require("./cv.service");
-const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const platform_express_1 = require("@nestjs/platform-express");
 const cv_import_service_1 = require("./cv-import/cv-import.service");
 let CvController = CvController_1 = class CvController {
@@ -44,6 +44,18 @@ let CvController = CvController_1 = class CvController {
             throw new common_1.InternalServerErrorException(`Une erreur est survenue lors du traitement automatisé de votre CV : ${error.message}`);
         }
     }
+    async removeCv(cvId, req) {
+        const userId = req.user.userId;
+        const cvIdNumber = Number(cvId);
+        if (!Number.isInteger(cvIdNumber) || cvIdNumber <= 0) {
+            throw new common_1.BadRequestException('Identifiant du CV invalide.');
+        }
+        this.logger.log(`Deleting CV ${cvIdNumber} for user ${userId}`);
+        await this.cvService.remove(cvIdNumber, userId);
+        return {
+            message: 'CV supprimé avec succès.',
+        };
+    }
 };
 exports.CvController = CvController;
 __decorate([
@@ -56,6 +68,15 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], CvController.prototype, "uploadCv", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Delete)(':cvId'),
+    __param(0, (0, common_1.Param)('cvId')),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], CvController.prototype, "removeCv", null);
 exports.CvController = CvController = CvController_1 = __decorate([
     (0, common_1.Controller)('cvs'),
     __metadata("design:paramtypes", [cv_service_1.CvService,

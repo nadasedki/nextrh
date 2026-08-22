@@ -91,10 +91,10 @@ let EvaluationMetricsService = EvaluationMetricsService_1 = class EvaluationMetr
                         filesWithOcrCount++;
                     }
                     parsed = {
-                        certName: aiResponse.certificate_name || aiResponse.certName || '',
+                        certName: aiResponse.certificate_name || '',
                         provider: aiResponse.provider || '',
-                        issueDate: aiResponse.date_of_obtention || aiResponse.issueDate || '',
-                        expiryDate: aiResponse.date_of_expiration || aiResponse.expiryDate || '',
+                        issueDate: aiResponse.date_of_obtention || '',
+                        expiryDate: aiResponse.date_of_expiration || '',
                     };
                 }
             }

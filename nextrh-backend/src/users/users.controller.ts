@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Req } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { RegisterDto } from '../auth/dto/register.dto';
@@ -10,7 +10,7 @@ export class UsersController {constructor(private readonly usersService: UsersSe
 
   // List all users (Bid Manager only)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('BID_MANAGER')
+  @Roles('BID_MANAGER', 'ADMIN')
   @Get()
   findAll() {
     return this.usersService.findAll();
@@ -24,7 +24,7 @@ export class UsersController {constructor(private readonly usersService: UsersSe
 }
   // Get user by ID (Bid Manager or Team Leader of the same team)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('TEAM_LEADER', 'BID_MANAGER')
+  @Roles('TEAM_LEADER', 'BID_MANAGER', 'ADMIN')
   @Get(':id')
   findOne(@Param('id') id: number) {
     return this.usersService.findOneById(id);
@@ -40,7 +40,7 @@ export class UsersController {constructor(private readonly usersService: UsersSe
 
   // Update user
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('TEAM_LEADER', 'BID_MANAGER')
+  @Roles('TEAM_LEADER', 'BID_MANAGER', 'ADMIN')
   @Patch(':id')
   update(@Param('id') id: number, @Body() dto: UpdateUserDto) {
     return this.usersService.update(id, dto);
@@ -48,12 +48,17 @@ export class UsersController {constructor(private readonly usersService: UsersSe
 
   // Delete user (soft delete or deactivate)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('BID_MANAGER')
+  @Roles('BID_MANAGER', 'ADMIN')
   @Delete(':id')
   remove(@Param('id') id: number) {
     return this.usersService.remove(id);
   }
 
-
+ @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('stats/global')
+  async getGlobalAdminStats() {
+    return this.usersService.getGlobalAdminStats();
+  }
 
 }

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, Like, Repository } from 'typeorm';
+import { Between, DataSource, Like, Repository } from 'typeorm';
 
 // Entities
 import { User } from '../users/entities/user.entity';
@@ -9,12 +9,14 @@ import { Training } from '../training/entities/training.entity';
 import { Certification } from '../certifications/entities/certification.entity';
 import { Cv } from '../cvs/entities/cv.entity';
 
-import { Team } from 'src/users/entities/team.entity';
+import { Team } from 'src/teams/entities/team.entity';
 import { Education } from 'src/education/entities/education.entity';
+import { Experience } from 'src/experience/entities/experience.entity';
 
 @Injectable()
 export class EmployeesService {
   constructor(
+    private readonly dataSource: DataSource,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @InjectRepository(Project)
@@ -28,6 +30,8 @@ export class EmployeesService {
 
      @InjectRepository(Education)
     private educationRepository: Repository<Education>,
+     @InjectRepository(Experience)
+    private experienceRepository: Repository<Experience>,
     
     @InjectRepository(Certification) private certRepository: Repository<Certification>,
     @InjectRepository(Team) private teamRepository: Repository<Team>,
@@ -35,7 +39,8 @@ export class EmployeesService {
 
   async getDashboardData(userId: number) {
     // 1. Fetch user profile data
-    const user = await this.userRepository.findOne({ where: { user_id: userId } });
+    const user = await this.userRepository.findOne({ where: { user_id: userId, 
+      active: true } }); 
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -51,16 +56,15 @@ const [projects, trainings, certifications, latestCv] = await Promise.all([
   }),
 ]);
 
-// 3. Format and combine data for the frontend
+
 return {
-  title: user.title || 'No Title', // From updated DB column
-  yearsOfExperience: user.years_of_experience || 0, // From updated DB column
-  
+  title: user.title || 'No Title', 
+  yearsOfExperience: user.years_of_experience || 0, 
   certifications: certifications.map(c => ({
     id: c.certId,
     name: c.certName,
     issuer: c.provider,
-    status: c.status //  DB has 'active', 'expiring_soon', 'expired'
+    status: c.status 
   })),
   
   trainings: trainings.map(t => ({ 
@@ -80,16 +84,16 @@ return {
 
 
   async getFullEmployeeCv(userId: number) {
-    // 1. Fetch User with relations (if defined in entity)
-    const user = await this.userRepository.findOne({ 
-        where: { user_id: userId },
-        relations: ['teams'] // Assuming User has team relationship
-    });
+  
+   const user = await this.userRepository.findOne({ 
+    where: { user_id: userId, active: true }, 
+    relations: ['teams']
+});
 
     if (!user) throw new NotFoundException('User not found');
 
-    // 2. Fetch all related data in parallel
-    const [projects, trainings, certifications,education,latestCv] = await Promise.all([
+    const [experiences,projects, trainings, certifications,education,latestCv] = await Promise.all([
+      this.experienceRepository.find({ where: { user_id: userId } }),
       this.projectRepository.find({ where: { user_id: userId } }),
       this.trainingRepository.find({ where: { user_id: userId } }),
       this.certificationRepository.find({ where: { userId: userId } }),
@@ -100,7 +104,7 @@ return {
       }),
       
     ]);
- //  Traitement des SKILLS (on s'assure que c'est un tableau)
+
     let skillsList = [];
     if (latestCv?.skills) {
       skillsList = Array.isArray(latestCv.skills) 
@@ -108,8 +112,11 @@ return {
         : String(latestCv.skills).split(',').map(s => s.trim());
     }
  
-    // 3. Assemble and Format for Frontend
+   
     return {
+          
+    id: latestCv?.cv_id,     
+    filePath: latestCv?.file_path, 
       name: latestCv?.full_name ,
       profession: latestCv?.profession || user.title || 'N/A',
       email: latestCv?.email || user.email,
@@ -120,14 +127,18 @@ return {
       projects: projects.map(p => ({
         id: p.id,
         name: p.name,
-       // role: p.role, // Add column to projects table
-        client: p.client, // Add column to projects table
+        client: p.client, 
         startDate: p.start_date,
         endDate: p.end_date,
         description: p.description,
-        //technologies: p.technologies || [] // PostgreSQL text[] array
-      })),
-      
+       })),
+       experiences: experiences.map(e => ({
+        id: e.id,
+        company: e.company,
+        startDate: e.start_date,
+        endDate: e.end_date,
+        description: e.description,
+       })),
       certifications: certifications.map(c => ({
         id: c.certId,
         name: c.certName,
@@ -139,9 +150,9 @@ return {
       trainings: trainings.map(t => ({
         id: t.training_id,
         name: t.training_name,
-        provider: t.provider, // Add column to training_sessions table
+        provider: t.provider, 
         completionDate: t.completion_date,
-        duration: t.duration // Add column to training_sessions table
+        duration: t.duration 
       })),
       
        education: education.map(edu => ({
@@ -156,10 +167,8 @@ return {
   }
   async findAllEmployees() {
     return this.userRepository.find({
-        // Include skills and certifications in the response
-       // relations: ['userSkills', 'userSkills.skill', 'certifications'],
-        relations: ['certifications'], 
-       where: { active: true }, // Assuming you have an active flag
+           relations: ['certifications'], 
+       where: { active: true }, 
         order: { score: 'DESC' } 
     });
   }
@@ -167,19 +176,15 @@ return {
     // Basic search functionality (can be made more robust with SQL queries)
     return this.userRepository.find({
       where: [
-        { full_name: Like(`%${query}%`) },
-        { title: Like(`%${query}%`) },
-        // Searching through relations is harder with TypeORM .find(), 
-        // you might need QueryBuilder here for better performance
-      ],
-      //relations: ['userSkills', 'userSkills.skill', 'certifications'],
-    
+        { full_name: Like(`%${query}%`), active: true },
+        { title: Like(`%${query}%`), active: true },
+          ],
       relations: [ 'certifications'],
     });
   }
   async findOne(id: number) {
   const user = await this.userRepository.findOne({
-    where: { user_id: id },
+    where: { user_id: id ,active: true},
     relations: [
       'certifications',
       'trainings',  
@@ -212,14 +217,18 @@ async calculateDashboardStats() {
     const totalEmployees = await this.userRepository.count({ where: { active: true } });
 
     // 2. Total Certifications
-    const totalCertifications = await this.certRepository.count();
-
+   const totalCertifications = await this.certRepository.count({
+  where: {
+    user: { active: true } // ◄ Filters out inactive users' certs
+  }
+});
     // 3. Expiring This Month
     const now = new Date();
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     const expiringThisMonth = await this.certRepository.count({
       where: {
         expiryDate: Between(now, endOfMonth),
+         user: { active: true }
       },
     });
 
@@ -227,7 +236,11 @@ async calculateDashboardStats() {
     const totalTeams = await this.teamRepository.count();
 
     // 5. Certification Status Breakdown
-    const certs = await this.certRepository.find();
+const certs = await this.certRepository.find({
+  where: {
+    user: { active: true } 
+  }
+});
     const certStatus = certs.reduce((acc, cert) => {
       acc[cert.status] = (acc[cert.status] || 0) + 1;
       return acc;
@@ -253,4 +266,5 @@ async calculateDashboardStats() {
       certificationsByProvider,
     };
   }
+
 }

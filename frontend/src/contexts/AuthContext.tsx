@@ -1,10 +1,9 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { User, UserRole } from '@/types';
 
-// 1. Updated interface to include token
 interface AuthContextType {
   user: User | null;
-  token: string | null; // <-- Added token property
+  token: string | null; 
   isAuthenticated: boolean;
   login: (email: string, password: string, role?: UserRole) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
@@ -16,15 +15,21 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  // Initialize user state from localStorage to prevent logouts on F5 page refresh
+  const [user, setUser] = useState<User | null>(() => {
+    const savedUser = localStorage.getItem('user');
+    try {
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
+  });
   
-  // 2. Initialize token state from localStorage
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
 
-  // Optional: Add logic to fetch user profile using the token on load
   useEffect(() => {
     if (token) {
-      // Validate token with backend and set user
+      // Optional: Add logic to fetch user profile using the token on load
       // Example: fetch('/auth/me', { headers: { Authorization: `Bearer ${token}` } })
     }
   }, [token]);
@@ -32,11 +37,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = useCallback(
     async (email: string, password: string, role?: UserRole) => {
       try {
-        // Map frontend role to backend role string
         const frontendToBackendRoleMap: Record<UserRole, string> = {
           employee: 'EMPLOYEE',
           manager: 'TEAM_LEADER',
           bid_manager: 'BID_MANAGER',
+          admin: 'ADMIN', 
         };
 
         const response = await fetch('http://localhost:3000/auth/login', {
@@ -55,17 +60,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return { success: false, message: data.message || 'Login failed' };
         }
 
-        // 3. Store token in localStorage and update state
+        // Store token in localStorage and update state
         localStorage.setItem('token', data.access_token);
         setToken(data.access_token);
 
-        // Map backend role back to frontend
+        // FIX 2: Added 'ADMIN': 'admin' to prevent "Unknown role from backend" crash
         const backendToFrontendRoleMap: Record<string, UserRole> = {
           EMPLOYEE: 'employee',
           TEAM_LEADER: 'manager',
           BID_MANAGER: 'bid_manager',
+          ADMIN: 'admin', // <-- ADDED: maps database 'ADMIN' back to frontend 'admin'
         };
- const backendRole = data.user.role?.role_name;
+
+        const backendRole = data.user.role?.role_name;
         
         if (!backendRole) {
           return { success: false, message: 'No role assigned to user object' };
@@ -81,7 +88,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           role: mappedRole,
         };
 
+        // FIX 3: Persist user object in localStorage so F5 page refresh keeps the session alive
+        localStorage.setItem('user', JSON.stringify(loggedUser));
         setUser(loggedUser);
+        
         return { success: true };
       } catch (error: any) {
         console.error('Login error:', error);
@@ -92,50 +102,56 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 
   const logout = useCallback(() => {
-    // 4. Remove token from localStorage and clear state
+    // Clean up both token and user object completely on logout
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setToken(null);
     setUser(null);
   }, []);
 
   const switchRole = useCallback((role: UserRole) => {
-    setUser(prev => (prev ? { ...prev, role } : null));
+    setUser(prev => {
+      if (!prev) return null;
+      const updatedUser = { ...prev, role };
+      localStorage.setItem('user', JSON.stringify(updatedUser)); // Keep state in sync
+      return updatedUser;
+    });
   }, []);
 
-const forgotPassword = async (email: string) => {
-  try {
-    const response = await fetch('http://localhost:3000/auth/forgot-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
-    const data = await response.json();
-    return { success: response.ok, message: data.message };
-  } catch (error) {
-    return { success: false, message: 'Network error' };
-  }
-};
+  const forgotPassword = async (email: string) => {
+    try {
+      const response = await fetch('http://localhost:3000/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+      return { success: response.ok, message: data.message };
+    } catch (error) {
+      return { success: false, message: 'Network error' };
+    }
+  };
 
- const resetPassword = async (token: string, newPassword: string) => {
-  try {
-    const response = await fetch('http://localhost:3000/auth/reset-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, newPassword }),
-    });
-    const data = await response.json();
-    return { success: response.ok, message: data.message };
-  } catch (error) {
-    return { success: false, message: 'Network error' };
-  }
-};
+  const resetPassword = async (token: string, newPassword: string) => {
+    try {
+      const response = await fetch('http://localhost:3000/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword }),
+      });
+      const data = await response.json();
+      return { success: response.ok, message: data.message };
+    } catch (error) {
+      return { success: false, message: 'Network error' };
+    }
+  };
 
   return (
     <AuthContext.Provider
       value={{ 
         user, 
-        token, // 5. Provide token to context consumers
-        isAuthenticated: !!token, // 6. Updated to use token for auth status
+        token, 
+        isAuthenticated: !!token, 
         login, 
         logout, 
         switchRole, 

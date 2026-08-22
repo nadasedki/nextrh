@@ -54,6 +54,6 @@ __decorate([
     __metadata("design:type", cv_entity_1.Cv)
 ], Education.prototype, "cv", void 0);
 exports.Education = Education = __decorate([
-    (0, typeorm_1.Entity)('education')
+    (0, typeorm_1.Entity)('educations')
 ], Education);
 //# sourceMappingURL=education.entity.js.map

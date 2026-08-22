@@ -1,0 +1,10 @@
+{
+  "test_cases": [
+    {
+      "query": "Who did a project with STB?",
+      "category": "project_query",
+      "expected_doc_ids": ["2_projects"],
+      "expected_answer": "Jazil Gafsi"
+    }
+  ]
+}

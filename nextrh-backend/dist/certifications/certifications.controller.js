@@ -18,10 +18,10 @@ const platform_express_1 = require("@nestjs/platform-express");
 const certifications_service_1 = require("./services/certifications.service");
 const create_certification_dto_1 = require("./dto/create-certification.dto");
 const update_certification_dto_1 = require("./dto/update-certification.dto");
-const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
-const roles_guard_1 = require("../auth/roles.guard");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../auth/guards/roles.guard");
 const roles_decorator_1 = require("../auth/roles.decorator");
-const certifications_parser_service_1 = require("./services/certifications-parser.service");
+const certifications_extraction_service_1 = require("./services/certifications-extraction.service");
 let CertificationsController = class CertificationsController {
     constructor(service, parserService) {
         this.service = service;
@@ -111,6 +111,6 @@ exports.CertificationsController = CertificationsController = __decorate([
     (0, roles_decorator_1.Roles)('EMPLOYEE'),
     (0, common_1.Controller)('certifications'),
     __metadata("design:paramtypes", [certifications_service_1.CertificationsService,
-        certifications_parser_service_1.CertificationsParserService])
+        certifications_extraction_service_1.CertificationsParserService])
 ], CertificationsController);
 //# sourceMappingURL=certifications.controller.js.map

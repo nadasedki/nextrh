@@ -1,7 +1,7 @@
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { Role } from './entities/role.entity';
-import { Team } from './entities/team.entity';
+import { Team } from '../teams/entities/team.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { RegisterDto } from 'src/auth/dto/register.dto';
 import { Experience } from 'src/experience/entities/experience.entity';
@@ -10,7 +10,8 @@ export declare class UsersService {
     private roleRepo;
     private teamRepo;
     private experienceRepo;
-    constructor(userRepo: Repository<User>, roleRepo: Repository<Role>, teamRepo: Repository<Team>, experienceRepo: Repository<Experience>);
+    private readonly dataSource;
+    constructor(userRepo: Repository<User>, roleRepo: Repository<Role>, teamRepo: Repository<Team>, experienceRepo: Repository<Experience>, dataSource: DataSource);
     create(dto: RegisterDto): Promise<User>;
     update(user_id: number, dto: UpdateUserDto): Promise<User>;
     findByEmail(email: string): Promise<User>;
@@ -21,4 +22,9 @@ export declare class UsersService {
     updatePassword(userId: number, hashedPassword: string): Promise<User>;
     updateProfileFromCv(userId: number, fullName?: string, title?: string): Promise<User>;
     updateYearsOfExperience(userId: number, years: number): Promise<number>;
+    getGlobalAdminStats(): Promise<{
+        totalUsers: number;
+        totalTeams: number;
+        totalCerts: number;
+    }>;
 }

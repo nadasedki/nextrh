@@ -21,21 +21,25 @@ const project_entity_1 = require("../project/entities/project.entity");
 const training_entity_1 = require("../training/entities/training.entity");
 const certification_entity_1 = require("../certifications/entities/certification.entity");
 const cv_entity_1 = require("../cvs/entities/cv.entity");
-const team_entity_1 = require("../users/entities/team.entity");
+const team_entity_1 = require("../teams/entities/team.entity");
 const education_entity_1 = require("../education/entities/education.entity");
+const experience_entity_1 = require("../experience/entities/experience.entity");
 let EmployeesService = class EmployeesService {
-    constructor(userRepository, projectRepository, trainingRepository, certificationRepository, cvRepository, educationRepository, certRepository, teamRepository) {
+    constructor(dataSource, userRepository, projectRepository, trainingRepository, certificationRepository, cvRepository, educationRepository, experienceRepository, certRepository, teamRepository) {
+        this.dataSource = dataSource;
         this.userRepository = userRepository;
         this.projectRepository = projectRepository;
         this.trainingRepository = trainingRepository;
         this.certificationRepository = certificationRepository;
         this.cvRepository = cvRepository;
         this.educationRepository = educationRepository;
+        this.experienceRepository = experienceRepository;
         this.certRepository = certRepository;
         this.teamRepository = teamRepository;
     }
     async getDashboardData(userId) {
-        const user = await this.userRepository.findOne({ where: { user_id: userId } });
+        const user = await this.userRepository.findOne({ where: { user_id: userId,
+                active: true } });
         if (!user) {
             throw new common_1.NotFoundException('User not found');
         }
@@ -70,12 +74,13 @@ let EmployeesService = class EmployeesService {
     }
     async getFullEmployeeCv(userId) {
         const user = await this.userRepository.findOne({
-            where: { user_id: userId },
+            where: { user_id: userId, active: true },
             relations: ['teams']
         });
         if (!user)
             throw new common_1.NotFoundException('User not found');
-        const [projects, trainings, certifications, education, latestCv] = await Promise.all([
+        const [experiences, projects, trainings, certifications, education, latestCv] = await Promise.all([
+            this.experienceRepository.find({ where: { user_id: userId } }),
             this.projectRepository.find({ where: { user_id: userId } }),
             this.trainingRepository.find({ where: { user_id: userId } }),
             this.certificationRepository.find({ where: { userId: userId } }),
@@ -92,6 +97,8 @@ let EmployeesService = class EmployeesService {
                 : String(latestCv.skills).split(',').map(s => s.trim());
         }
         return {
+            id: latestCv?.cv_id,
+            filePath: latestCv?.file_path,
             name: latestCv?.full_name,
             profession: latestCv?.profession || user.title || 'N/A',
             email: latestCv?.email || user.email,
@@ -106,6 +113,13 @@ let EmployeesService = class EmployeesService {
                 startDate: p.start_date,
                 endDate: p.end_date,
                 description: p.description,
+            })),
+            experiences: experiences.map(e => ({
+                id: e.id,
+                company: e.company,
+                startDate: e.start_date,
+                endDate: e.end_date,
+                description: e.description,
             })),
             certifications: certifications.map(c => ({
                 id: c.certId,
@@ -141,15 +155,15 @@ let EmployeesService = class EmployeesService {
     async searchEmployees(query) {
         return this.userRepository.find({
             where: [
-                { full_name: (0, typeorm_2.Like)(`%${query}%`) },
-                { title: (0, typeorm_2.Like)(`%${query}%`) },
+                { full_name: (0, typeorm_2.Like)(`%${query}%`), active: true },
+                { title: (0, typeorm_2.Like)(`%${query}%`), active: true },
             ],
             relations: ['certifications'],
         });
     }
     async findOne(id) {
         const user = await this.userRepository.findOne({
-            where: { user_id: id },
+            where: { user_id: id, active: true },
             relations: [
                 'certifications',
                 'trainings',
@@ -177,16 +191,25 @@ let EmployeesService = class EmployeesService {
     }
     async calculateDashboardStats() {
         const totalEmployees = await this.userRepository.count({ where: { active: true } });
-        const totalCertifications = await this.certRepository.count();
+        const totalCertifications = await this.certRepository.count({
+            where: {
+                user: { active: true }
+            }
+        });
         const now = new Date();
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         const expiringThisMonth = await this.certRepository.count({
             where: {
                 expiryDate: (0, typeorm_2.Between)(now, endOfMonth),
+                user: { active: true }
             },
         });
         const totalTeams = await this.teamRepository.count();
-        const certs = await this.certRepository.find();
+        const certs = await this.certRepository.find({
+            where: {
+                user: { active: true }
+            }
+        });
         const certStatus = certs.reduce((acc, cert) => {
             acc[cert.status] = (acc[cert.status] || 0) + 1;
             return acc;
@@ -212,15 +235,18 @@ let EmployeesService = class EmployeesService {
 exports.EmployeesService = EmployeesService;
 exports.EmployeesService = EmployeesService = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
-    __param(1, (0, typeorm_1.InjectRepository)(project_entity_1.Project)),
-    __param(2, (0, typeorm_1.InjectRepository)(training_entity_1.Training)),
-    __param(3, (0, typeorm_1.InjectRepository)(certification_entity_1.Certification)),
-    __param(4, (0, typeorm_1.InjectRepository)(cv_entity_1.Cv)),
-    __param(5, (0, typeorm_1.InjectRepository)(education_entity_1.Education)),
-    __param(6, (0, typeorm_1.InjectRepository)(certification_entity_1.Certification)),
-    __param(7, (0, typeorm_1.InjectRepository)(team_entity_1.Team)),
-    __metadata("design:paramtypes", [typeorm_2.Repository,
+    __param(1, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
+    __param(2, (0, typeorm_1.InjectRepository)(project_entity_1.Project)),
+    __param(3, (0, typeorm_1.InjectRepository)(training_entity_1.Training)),
+    __param(4, (0, typeorm_1.InjectRepository)(certification_entity_1.Certification)),
+    __param(5, (0, typeorm_1.InjectRepository)(cv_entity_1.Cv)),
+    __param(6, (0, typeorm_1.InjectRepository)(education_entity_1.Education)),
+    __param(7, (0, typeorm_1.InjectRepository)(experience_entity_1.Experience)),
+    __param(8, (0, typeorm_1.InjectRepository)(certification_entity_1.Certification)),
+    __param(9, (0, typeorm_1.InjectRepository)(team_entity_1.Team)),
+    __metadata("design:paramtypes", [typeorm_2.DataSource,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,

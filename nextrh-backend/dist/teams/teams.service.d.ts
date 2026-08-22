@@ -1,18 +1,20 @@
 import { Repository } from 'typeorm';
-import { Team } from '../users/entities/team.entity';
-import { AddMemberDto } from './dto/add-member.dto';
-import { User } from 'src/users/entities/user.entity';
-import { UsersService } from 'src/users/users.service';
-import { AuthService } from 'src/auth/auth.service';
+import { Team } from './entities/team.entity';
+import { User } from '../users/entities/user.entity';
+import { UsersService } from '../users/users.service';
+import { AuthService } from '../auth/auth.service';
 export declare class TeamsService {
-    private teamRepo;
-    private userRepo;
-    private usersService;
-    private authService;
+    private readonly teamRepo;
+    private readonly userRepo;
+    private readonly usersService;
+    private readonly authService;
     constructor(teamRepo: Repository<Team>, userRepo: Repository<User>, usersService: UsersService, authService: AuthService);
     addMemberByEmail(leaderId: number, email: string): Promise<{
         message: string;
         user_id: number;
+    }>;
+    removeMemberFromLeaderTeam(leaderId: number, memberId: number): Promise<{
+        message: string;
     }>;
     create(dto: {
         team_name: string;
@@ -20,16 +22,6 @@ export declare class TeamsService {
     }): Promise<Team>;
     findAll(): Promise<Team[]>;
     getMyTeam(leaderId: number): Promise<Team>;
-    addMember(dto: AddMemberDto): Promise<{
-        message: string;
-    }>;
-    findByLeader(leaderId: number): Promise<Team>;
-    removeMember(dto: {
-        team_id: number;
-        user_id: number;
-    }): Promise<{
-        message: string;
-    }>;
     findOne(id: number): Promise<Team>;
     findMembersByManager(managerId: number): Promise<{
         id: number;
@@ -52,18 +44,11 @@ export declare class TeamsService {
             value: number;
         }[];
         expiringCerts: {
-            employeeName: string;
-            certId: number;
-            certName: string;
+            id: number;
+            name: string;
+            expiryDate: string;
             provider: string;
-            issueDate: Date;
-            expiryDate: Date;
-            filePath: string;
-            status: string;
-            credentialId: string;
-            user: User;
-            userId: number;
-            cv: import("../cvs/entities/cv.entity").Cv;
+            employeeName: string;
         }[];
     }>;
     findAllTeamCertifications(leaderId: number): Promise<{

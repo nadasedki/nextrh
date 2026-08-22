@@ -46,6 +46,9 @@ export class Cv {
 @Column("simple-array", { nullable: true })
 skills: string[];
 
+  @Column({ name: 'active_generation', default: 1 })
+  active_generation: number;
+  
    @OneToMany(() => Education, (education) => education.cv, { cascade: true })
   educations: Education[];
 

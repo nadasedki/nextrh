@@ -1,8 +1,7 @@
-// src/pages/BIDDashboard.tsx
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Award, AlertTriangle, Building2, ChevronRight, Loader2 } from 'lucide-react';
+import { Users, Award, AlertTriangle, Building2, ChevronRight, Loader2, Search, Bot } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
@@ -61,7 +60,7 @@ const BIDDashboard: React.FC = () => {
   );
   
   if (error) return (
-    <div className="text-center py-10 text-destructive font-semibold">{error}</div>
+    <div className="p-4 text-center py-10 text-destructive font-semibold">{error}</div>
   );
 
   const pieData = [
@@ -73,84 +72,121 @@ const BIDDashboard: React.FC = () => {
   const barData = stats?.certificationsByProvider || [];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">BID Dashboard</h1>
-        <p className="text-muted-foreground">Global overview of workforce capabilities</p>
+    <div className="space-y-4">
+      {/* ============================
+          HEADER WITH BUTTONS
+      ============================ */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">BID Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Global overview of workforce capabilities</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => navigate('/bid/directory')}>
+            <Search className="h-4 w-4 mr-2" />
+            Search Employees
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => navigate('/bid/ai-chat')}>
+            <Bot className="h-4 w-4 mr-2" />
+            AI Assistant
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Employees</CardTitle>
-            <Users className="h-4 w-4 text-primary" />
+      {/* ============================
+          STYLED STATS GRID
+      ============================ */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <Card className="border-l-4 border-l-primary shadow-sm hover:bg-muted/50 transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3 px-4">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Employees</CardTitle>
+            <Users className="h-4 w-4 text-primary opacity-70" />
           </CardHeader>
-          <CardContent><div className="text-3xl font-bold">{stats?.totalEmployees}</div></CardContent>
+          <CardContent className="px-4 pb-3">
+            <div className="text-2xl font-bold">{stats?.totalEmployees}</div>
+          </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Certifications</CardTitle>
-            <Award className="h-4 w-4 text-success" />
+
+        <Card className="border-l-4 border-l-success shadow-sm hover:bg-muted/50 transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3 px-4">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Certs</CardTitle>
+            <Award className="h-4 w-4 text-success opacity-70" />
           </CardHeader>
-          <CardContent><div className="text-3xl font-bold">{stats?.totalCertifications}</div></CardContent>
+          <CardContent className="px-4 pb-3">
+            <div className="text-2xl font-bold">{stats?.totalCertifications}</div>
+          </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Expiring This Month</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-warning" />
+
+        <Card className="border-l-4 border-l-warning shadow-sm hover:bg-muted/50 transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3 px-4">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">Expiring Month</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-warning opacity-70" />
           </CardHeader>
-          <CardContent><div className="text-3xl font-bold text-warning">{stats?.expiringThisMonth}</div></CardContent>
+          <CardContent className="px-4 pb-3">
+            <div className="text-2xl font-bold text-warning">{stats?.expiringThisMonth}</div>
+          </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Teams</CardTitle>
-            <Building2 className="h-4 w-4 text-accent" />
+
+        <Card className="border-l-4 border-l-accent shadow-sm hover:bg-muted/50 transition-colors">
+          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3 px-4">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">Teams</CardTitle>
+            <Building2 className="h-4 w-4 text-accent opacity-70" />
           </CardHeader>
-          <CardContent><div className="text-3xl font-bold">{stats?.totalTeams}</div></CardContent>
+          <CardContent className="px-4 pb-3">
+            <div className="text-2xl font-bold">{stats?.totalTeams}</div>
+          </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader><CardTitle className="text-lg">Certification Status</CardTitle></CardHeader>
-          <CardContent>
-            <div className="h-64">
+      {/* ============================
+          CHARTS ROW
+      ============================ */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="animate-fade-in">
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="text-lg">Certification Status</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="h-64 sm:h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value" label>
+                  <Pie 
+                    data={pieData} 
+                    cx="50%" 
+                    cy="50%" 
+                    innerRadius={60} 
+                    outerRadius={90} 
+                    paddingAngle={5} 
+                    dataKey="value" 
+                    label={{ fontSize: 12 }}
+                  >
                     {pieData.map((entry, index) => (<Cell key={index} fill={entry.color} />))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))' }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader><CardTitle className="text-lg">Certifications by Provider</CardTitle></CardHeader>
-          <CardContent>
-            <div className="h-64">
+
+        <Card className="animate-fade-in">
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="text-lg">Certifications by Provider</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="h-64 sm:h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" />
-                  <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                <BarChart data={barData} layout="vertical" margin={{ left: -10, right: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.2} />
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11 }} axisLine={false} />
+                  <Tooltip cursor={{ fill: 'hsl(var(--muted)/0.4)' }} />
+                  <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={30} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
-      </div>
-      
-      <div className="flex gap-4">
-        <Button onClick={() => navigate('/bid/directory')}>
-          <Users className="h-4 w-4 mr-2" />Search Employees
-        </Button>
-        <Button variant="outline" onClick={() => navigate('/bid/ai-chat')}>
-          AI Assistant<ChevronRight className="h-4 w-4 ml-1" />
-        </Button>
       </div>
     </div>
   );

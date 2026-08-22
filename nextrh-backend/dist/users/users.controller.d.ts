@@ -10,4 +10,9 @@ export declare class UsersController {
     create(dto: RegisterDto): Promise<import("./entities/user.entity").User>;
     update(id: number, dto: UpdateUserDto): Promise<import("./entities/user.entity").User>;
     remove(id: number): Promise<import("./entities/user.entity").User>;
+    getGlobalAdminStats(): Promise<{
+        totalUsers: number;
+        totalTeams: number;
+        totalCerts: number;
+    }>;
 }

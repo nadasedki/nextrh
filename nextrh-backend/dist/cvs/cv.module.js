@@ -14,7 +14,7 @@ const typeorm_1 = require("@nestjs/typeorm");
 const cv_entity_1 = require("./entities/cv.entity");
 const education_module_1 = require("../education/education.module");
 const cv_import_service_1 = require("./cv-import/cv-import.service");
-const document_module_1 = require("../document-manager/document.module");
+const cv_parser_module_1 = require("../cv-parser/cv-parser.module");
 const certifications_module_1 = require("../certifications/certifications.module");
 const project_module_1 = require("../project/project.module");
 const users_module_1 = require("../users/users.module");
@@ -27,12 +27,13 @@ exports.CvModule = CvModule = __decorate([
     (0, common_1.Module)({
         imports: [
             typeorm_1.TypeOrmModule.forFeature([cv_entity_1.Cv]),
-            education_module_1.EducationModule, document_module_1.DocumentModule,
+            education_module_1.EducationModule,
             certifications_module_1.CertificationsModule,
             project_module_1.ProjectModule,
             users_module_1.UsersModule,
             experience_module_1.ExperienceModule,
             scoring_module_1.ScoringModule,
+            cv_parser_module_1.CvParserModule
         ],
         controllers: [cv_controller_1.CvController],
         providers: [cv_service_1.CvService, cv_import_service_1.CvImportService],

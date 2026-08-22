@@ -17,7 +17,7 @@ const user_entity_1 = require("../users/entities/user.entity");
 const google_calendar_module_1 = require("../google-calendar/google-calendar.module");
 const scoring_module_1 = require("../scoring/scoring.module");
 const CertificationsListener_1 = require("./CertificationsListener");
-const certifications_parser_service_1 = require("./services/certifications-parser.service");
+const certifications_extraction_service_1 = require("./services/certifications-extraction.service");
 let CertificationsModule = class CertificationsModule {
 };
 exports.CertificationsModule = CertificationsModule;
@@ -27,7 +27,7 @@ exports.CertificationsModule = CertificationsModule = __decorate([
         controllers: [certifications_controller_1.CertificationsController],
         providers: [certifications_service_1.CertificationsService,
             CertificationsListener_1.CertificationsListener,
-            certifications_parser_service_1.CertificationsParserService],
+            certifications_extraction_service_1.CertificationsParserService],
         exports: [certifications_service_1.CertificationsService],
     })
 ], CertificationsModule);

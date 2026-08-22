@@ -5,13 +5,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Experience } from './entities/experience.entity';
 import { Cv } from 'src/cvs/entities/cv.entity';
-
+import { EventEmitter2 } from '@nestjs/event-emitter'; 
 @Injectable()
 export class ExperienceService {
   constructor(
     @InjectRepository(Experience)
     private readonly experienceRepo: Repository<Experience>,
-  ) {}
+    private readonly eventEmitter: EventEmitter2, 
+   ) {}
 
 
   async createBulkFromParsedData(expData: any[], userId: number, cvEntity?: Cv) {
@@ -26,7 +27,7 @@ export class ExperienceService {
         role: exp.role || 'Poste non spécifié',
         start_date: startDate,
         end_date: endDate,
-        description: exp.role, // Using role as description as well
+        description: exp.role, 
         cv: cvEntity, 
       });
     });
@@ -89,7 +90,11 @@ async create(data: any) {
 
   // 3. Sauvegarde (On force le type de retour à 'Experience' pour éviter l'erreur de tableau)
   const saved = await this.experienceRepo.save(newExp) as unknown as Experience;
-
+  
+  this.eventEmitter.emit('experience.saved', {
+    entityId: saved.id,
+    userId: saved.user_id,
+  });
   // 4. Retour des données au format attendu par le Frontend
   return {
     id: saved.id,
@@ -140,6 +145,10 @@ async update(id: number, userId: number, data: any) {
   // 4. Sauvegarde
   const saved = await this.experienceRepo.save(exp);
 
+  this.eventEmitter.emit('experience.saved', {
+      entityId: id,
+      userId,
+    });
   // 5. Retour au format Frontend
   return {
     id: saved.id,
@@ -159,8 +168,13 @@ async remove(id: number, userId: number) {
   if (!exp) {
     throw new Error('Experience not found or unauthorized');
   }
+   const removed = await this.experienceRepo.remove(exp);
 
-  return await this.experienceRepo.remove(exp);
+this.eventEmitter.emit('experience.deleted', {
+      entityId: id,
+      userId,
+    });
+  return removed;
 }
 
 async calculateTotalExperience(userId: number) {

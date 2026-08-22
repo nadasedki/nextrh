@@ -15,8 +15,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UsersController = void 0;
 const common_1 = require("@nestjs/common");
 const users_service_1 = require("./users.service");
-const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
-const roles_guard_1 = require("../auth/roles.guard");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../auth/guards/roles.guard");
 const roles_decorator_1 = require("../auth/roles.decorator");
 const update_user_dto_1 = require("./dto/update-user.dto");
 const register_dto_1 = require("../auth/dto/register.dto");
@@ -43,11 +43,14 @@ let UsersController = class UsersController {
     remove(id) {
         return this.usersService.remove(id);
     }
+    async getGlobalAdminStats() {
+        return this.usersService.getGlobalAdminStats();
+    }
 };
 exports.UsersController = UsersController;
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('BID_MANAGER'),
+    (0, roles_decorator_1.Roles)('BID_MANAGER', 'ADMIN'),
     (0, common_1.Get)(),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
@@ -64,7 +67,7 @@ __decorate([
 ], UsersController.prototype, "getTeamMembers", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('TEAM_LEADER', 'BID_MANAGER'),
+    (0, roles_decorator_1.Roles)('TEAM_LEADER', 'BID_MANAGER', 'ADMIN'),
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -82,7 +85,7 @@ __decorate([
 ], UsersController.prototype, "create", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('TEAM_LEADER', 'BID_MANAGER'),
+    (0, roles_decorator_1.Roles)('TEAM_LEADER', 'BID_MANAGER', 'ADMIN'),
     (0, common_1.Patch)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
@@ -92,13 +95,21 @@ __decorate([
 ], UsersController.prototype, "update", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('BID_MANAGER'),
+    (0, roles_decorator_1.Roles)('BID_MANAGER', 'ADMIN'),
     (0, common_1.Delete)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "remove", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, common_1.Get)('stats/global'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "getGlobalAdminStats", null);
 exports.UsersController = UsersController = __decorate([
     (0, common_1.Controller)('users'),
     __metadata("design:paramtypes", [users_service_1.UsersService])

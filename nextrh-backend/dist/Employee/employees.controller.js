@@ -15,15 +15,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmployeesController = void 0;
 const common_1 = require("@nestjs/common");
 const employees_service_1 = require("./employees.service");
-const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
-const roles_guard_1 = require("../auth/roles.guard");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../auth/guards/roles.guard");
 const roles_decorator_1 = require("../auth/roles.decorator");
 let EmployeesController = class EmployeesController {
     constructor(employeesService) {
         this.employeesService = employeesService;
     }
     async findMe(req) {
-        const userId = req.user?.userId || req.user?.sub || req.user?.id || req.user?.user_id;
+        const userId = req.user?.userId;
         console.log(' GET /employees/me - userId:', userId);
         return this.employeesService.getDashboardData(userId);
     }
@@ -82,7 +82,7 @@ __decorate([
 ], EmployeesController.prototype, "getEmployeeById", null);
 exports.EmployeesController = EmployeesController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('EMPLOYEE', 'BID_MANAGER', 'TEAM_LEADER'),
+    (0, roles_decorator_1.Roles)('EMPLOYEE', 'BID_MANAGER', 'TEAM_LEADER', 'ADMIN'),
     (0, common_1.Controller)('employees'),
     __metadata("design:paramtypes", [employees_service_1.EmployeesService])
 ], EmployeesController);

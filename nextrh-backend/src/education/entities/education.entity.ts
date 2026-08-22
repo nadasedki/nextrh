@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 import { Cv } from 'src/cvs/entities/cv.entity';
-@Entity('education')
+@Entity('educations')
 export class Education {
   @PrimaryGeneratedColumn()
   education_id: number;

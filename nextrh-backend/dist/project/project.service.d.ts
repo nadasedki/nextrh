@@ -3,10 +3,12 @@ import { Project } from './entities/project.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { Cv } from 'src/cvs/entities/cv.entity';
 import { ScoringService } from 'src/scoring/scoring.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 export declare class ProjectService {
     private projectRepository;
     private readonly scoringService;
-    constructor(projectRepository: Repository<Project>, scoringService: ScoringService);
+    private readonly eventEmitter;
+    constructor(projectRepository: Repository<Project>, scoringService: ScoringService, eventEmitter: EventEmitter2);
     create(userId: number, createDto: CreateProjectDto): Promise<any>;
     findByUser(userId: number): Promise<{
         id: number;

@@ -9,7 +9,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TeamsModule = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
-const team_entity_1 = require("../users/entities/team.entity");
+const team_entity_1 = require("./entities/team.entity");
 const teams_service_1 = require("./teams.service");
 const teams_controller_1 = require("./teams.controller");
 const user_entity_1 = require("../users/entities/user.entity");

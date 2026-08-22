@@ -60,7 +60,7 @@ let ParserService = class ParserService {
         return files;
     }
     async extractTextFromImage(imagePath) {
-        const result = await tesseract.recognize(imagePath, 'eng');
+        const result = await tesseract.recognize(imagePath, 'eng+fra');
         return {
             text: result.data.text,
             confidence: result.data.confidence

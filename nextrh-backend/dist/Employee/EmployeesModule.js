@@ -16,8 +16,10 @@ const project_entity_1 = require("../project/entities/project.entity");
 const training_entity_1 = require("../training/entities/training.entity");
 const certification_entity_1 = require("../certifications/entities/certification.entity");
 const cv_entity_1 = require("../cvs/entities/cv.entity");
-const team_entity_1 = require("../users/entities/team.entity");
+const team_entity_1 = require("../teams/entities/team.entity");
 const education_entity_1 = require("../education/entities/education.entity");
+const experience_entity_1 = require("../experience/entities/experience.entity");
+const employeeProfile_service_1 = require("./employeeProfile.service");
 let EmployeesModule = class EmployeesModule {
 };
 exports.EmployeesModule = EmployeesModule;
@@ -30,12 +32,14 @@ exports.EmployeesModule = EmployeesModule = __decorate([
                 training_entity_1.Training,
                 certification_entity_1.Certification,
                 cv_entity_1.Cv,
-                team_entity_1.Team, education_entity_1.Education
+                team_entity_1.Team,
+                education_entity_1.Education,
+                experience_entity_1.Experience,
             ]),
         ],
         controllers: [employees_controller_1.EmployeesController],
-        providers: [employees_service_1.EmployeesService],
-        exports: [employees_service_1.EmployeesService],
+        providers: [employees_service_1.EmployeesService, employeeProfile_service_1.EmployeeProfileService],
+        exports: [employeeProfile_service_1.EmployeeProfileService],
     })
 ], EmployeesModule);
 //# sourceMappingURL=EmployeesModule.js.map

@@ -18,5 +18,25 @@
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false
+  },
+  // 1. Tell the compiler never to look inside these directories
+  "exclude": [
+    "node_modules",
+    "dist",
+    "uploads",
+    "src/assets/uploads",
+    "temp",
+    "tmp"
+  ],
+  // 2. Tell the file watcher to completely ignore disk changes inside these directories
+  "watchOptions": {
+    "excludeDirectories": [
+      "**/node_modules",
+      "**/dist",
+      "**/uploads",
+      "**/src/assets/uploads",
+      "**/temp",
+      "**/tmp"
+    ]
   }
 }

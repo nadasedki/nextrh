@@ -5,6 +5,6 @@ export class Role {
   @PrimaryGeneratedColumn()
   role_id: number;
 
-  @Column({ type: 'enum', enum: ['EMPLOYEE','TEAM_LEADER','BID_MANAGER'], unique: true })
+  @Column({ type: 'enum', enum: ['EMPLOYEE','TEAM_LEADER','BID_MANAGER','ADMIN'], unique: true })
   role_name: string;
 }

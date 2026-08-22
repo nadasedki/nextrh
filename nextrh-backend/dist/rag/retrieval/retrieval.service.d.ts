@@ -1,16 +1,15 @@
+import { ConfigService } from '@nestjs/config';
 import { VectorService } from '../vector/vector.service';
 import { EmbeddingService } from '../embedding/embedding.service';
+import { QueryPreprocessorService } from './query-preprocessor.service';
+import { VectorSearchResult } from '../types/rag-types';
 export declare class RetrievalService {
-    private vector;
-    private embed;
-    constructor(vector: VectorService, embed: EmbeddingService);
-    retrieve(question: string): Promise<{
-        id: import("@qdrant/js-client-rest/dist/types/openapi/generated_schema").components["schemas"]["ExtendedPointId"];
-        version: number;
-        score: number;
-        payload?: import("@qdrant/js-client-rest/dist/types/openapi/generated_schema").components["schemas"]["Payload"] | (Record<string, unknown> | null);
-        vector?: import("@qdrant/js-client-rest/dist/types/openapi/generated_schema").components["schemas"]["VectorStructOutput"] | (Record<string, unknown> | null);
-        shard_key?: import("@qdrant/js-client-rest/dist/types/openapi/generated_schema").components["schemas"]["ShardKey"] | (Record<string, unknown> | null);
-        order_value?: import("@qdrant/js-client-rest/dist/types/openapi/generated_schema").components["schemas"]["OrderValue"] | (Record<string, unknown> | null);
-    }[]>;
+    private readonly vector;
+    private readonly embed;
+    private readonly preprocessor;
+    private readonly configService;
+    private readonly logger;
+    private readonly topK;
+    constructor(vector: VectorService, embed: EmbeddingService, preprocessor: QueryPreprocessorService, configService: ConfigService);
+    retrieve(question: string): Promise<VectorSearchResult[]>;
 }

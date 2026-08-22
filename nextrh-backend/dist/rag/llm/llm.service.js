@@ -8,32 +8,35 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var LlmService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LlmService = void 0;
 const common_1 = require("@nestjs/common");
-const ollama_1 = require("@langchain/ollama");
-const config_1 = require("@nestjs/config");
-let LlmService = class LlmService {
-    constructor(configService) {
-        this.configService = configService;
-        this.chatModel = new ollama_1.ChatOllama({
-            baseUrl: this.configService.get('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
-            model: this.configService.get('OLLAMA_MODEL', 'qwen2.5:7b'),
-        });
+const llm_interface_1 = require("../../llm/llm.interface");
+let LlmService = LlmService_1 = class LlmService {
+    constructor(llmEngine) {
+        this.llmEngine = llmEngine;
+        this.logger = new common_1.Logger(LlmService_1.name);
+        this.logger.log('RAG LlmService initialized using global LLM_ENGINE strategy [2].');
     }
-    async generate(prompt) {
+    async generate(prompt, schema) {
         try {
-            const response = await this.chatModel.invoke(prompt);
-            return response.content;
+            const parsed = await this.llmEngine.generateStructured(prompt, schema);
+            return parsed;
         }
         catch (error) {
-            throw new common_1.ServiceUnavailableException('The AI Inference engine is currently unreachable. Please try again.');
+            this.logger.error(`LLM generation failed: ${error.message}`);
+            throw new common_1.ServiceUnavailableException('The AI inference engine is currently unreachable. Please try again.');
         }
     }
 };
 exports.LlmService = LlmService;
-exports.LlmService = LlmService = __decorate([
+exports.LlmService = LlmService = LlmService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [config_1.ConfigService])
+    __param(0, (0, common_1.Inject)(llm_interface_1.LLM_ENGINE)),
+    __metadata("design:paramtypes", [Object])
 ], LlmService);
 //# sourceMappingURL=llm.service.js.map

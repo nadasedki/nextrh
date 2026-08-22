@@ -1,8 +1,8 @@
 import { Controller, Post, Body, UseGuards, Req, Get, Patch,Request, ParseIntPipe, Param, Delete } from '@nestjs/common';
 import { ProjectService } from './project.service'; // Adjust path
 import { CreateProjectDto } from './dto/create-project.dto'; // Adjust path
-import { JwtAuthGuard } from '../auth/jwt-auth.guard'; // Adjust path
-import { RolesGuard } from '../auth/roles.guard'; // Adjust path
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'; // Adjust path
+import { RolesGuard } from '../auth/guards/roles.guard'; // Adjust path
 import { Roles } from '../auth/roles.decorator'; // Adjust path
 
 @UseGuards(JwtAuthGuard, RolesGuard)

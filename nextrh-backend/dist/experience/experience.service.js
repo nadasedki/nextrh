@@ -17,9 +17,11 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const experience_entity_1 = require("./entities/experience.entity");
+const event_emitter_1 = require("@nestjs/event-emitter");
 let ExperienceService = class ExperienceService {
-    constructor(experienceRepo) {
+    constructor(experienceRepo, eventEmitter) {
         this.experienceRepo = experienceRepo;
+        this.eventEmitter = eventEmitter;
     }
     async createBulkFromParsedData(expData, userId, cvEntity) {
         if (!expData || expData.length === 0)
@@ -65,6 +67,10 @@ let ExperienceService = class ExperienceService {
             end_date: endDate ? new Date(endDate) : null,
         });
         const saved = await this.experienceRepo.save(newExp);
+        this.eventEmitter.emit('experience.saved', {
+            entityId: saved.id,
+            userId: saved.user_id,
+        });
         return {
             id: saved.id,
             company: saved.company,
@@ -102,6 +108,10 @@ let ExperienceService = class ExperienceService {
         if (endDate)
             exp.end_date = new Date(endDate);
         const saved = await this.experienceRepo.save(exp);
+        this.eventEmitter.emit('experience.saved', {
+            entityId: id,
+            userId,
+        });
         return {
             id: saved.id,
             company: saved.company,
@@ -118,7 +128,12 @@ let ExperienceService = class ExperienceService {
         if (!exp) {
             throw new Error('Experience not found or unauthorized');
         }
-        return await this.experienceRepo.remove(exp);
+        const removed = await this.experienceRepo.remove(exp);
+        this.eventEmitter.emit('experience.deleted', {
+            entityId: id,
+            userId,
+        });
+        return removed;
     }
     async calculateTotalExperience(userId) {
         const experiences = await this.experienceRepo.find({
@@ -145,6 +160,7 @@ exports.ExperienceService = ExperienceService;
 exports.ExperienceService = ExperienceService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(experience_entity_1.Experience)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        event_emitter_1.EventEmitter2])
 ], ExperienceService);
 //# sourceMappingURL=experience.service.js.map

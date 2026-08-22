@@ -16,21 +16,13 @@ exports.TrainingController = void 0;
 const common_1 = require("@nestjs/common");
 const training_service_1 = require("../training/training.service");
 const create_training_dto_1 = require("./dto/create-training.dto");
-const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
-const roles_guard_1 = require("../auth/roles.guard");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../auth/guards/roles.guard");
 const roles_decorator_1 = require("../auth/roles.decorator");
 const update_training_dto_1 = require("./dto/update-training.dto");
 let TrainingController = class TrainingController {
     constructor(trainingService) {
         this.trainingService = trainingService;
-    }
-    async createTraining(req, createDto) {
-        console.log('🚨 TRAINING DEBUG - req.user:', req.user);
-        const userId = req.user?.userId;
-        if (!userId) {
-            throw new Error('User ID is missing from JWT token!');
-        }
-        return this.trainingService.create(userId, createDto);
     }
     async findMine(req) {
         console.log('🚨 GET /trainings/me - Request received');
@@ -41,57 +33,66 @@ let TrainingController = class TrainingController {
         }
         return this.trainingService.findByUser(userId);
     }
-    async updateTraining(req, id, updateDto) {
-        const userId = req.user?.userId;
-        if (!userId) {
-            throw new Error('User ID is missing from JWT token!');
-        }
+    async findEmployeeTrainings(userId) {
+        return this.trainingService.findByUser(userId);
+    }
+    async createTraining(userId, createDto) {
+        return this.trainingService.create(userId, createDto);
+    }
+    async updateTraining(id, userId, updateDto) {
         return this.trainingService.update(userId, id, updateDto);
     }
-    async deleteTraining(req, id) {
-        const userId = req.user?.userId;
-        if (!userId) {
-            throw new Error('User ID is missing from JWT token!');
-        }
+    async deleteTraining(id, userId) {
         return this.trainingService.remove(userId, id);
     }
 };
 exports.TrainingController = TrainingController;
 __decorate([
-    (0, common_1.Post)(),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, create_training_dto_1.CreateTrainingDto]),
-    __metadata("design:returntype", Promise)
-], TrainingController.prototype, "createTraining", null);
-__decorate([
     (0, common_1.Get)('me'),
+    (0, roles_decorator_1.Roles)('EMPLOYEE'),
     __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], TrainingController.prototype, "findMine", null);
 __decorate([
-    (0, common_1.Patch)(':id'),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    (0, common_1.Get)('employee/:userId'),
+    (0, roles_decorator_1.Roles)('MANAGER', 'TEAM_LEADER', 'BID_MANAGER', 'ADMIN'),
+    __param(0, (0, common_1.Param)('userId', common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], TrainingController.prototype, "findEmployeeTrainings", null);
+__decorate([
+    (0, common_1.Post)(':userId'),
+    (0, roles_decorator_1.Roles)('MANAGER', 'TEAM_LEADER', 'BID_MANAGER', 'ADMIN'),
+    __param(0, (0, common_1.Param)('userId', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, create_training_dto_1.CreateTrainingDto]),
+    __metadata("design:returntype", Promise)
+], TrainingController.prototype, "createTraining", null);
+__decorate([
+    (0, common_1.Patch)(':id/:userId'),
+    (0, roles_decorator_1.Roles)('MANAGER', 'TEAM_LEADER', 'BID_MANAGER', 'ADMIN'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Param)('userId', common_1.ParseIntPipe)),
     __param(2, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Number, update_training_dto_1.UpdateTrainingDto]),
+    __metadata("design:paramtypes", [Number, Number, update_training_dto_1.UpdateTrainingDto]),
     __metadata("design:returntype", Promise)
 ], TrainingController.prototype, "updateTraining", null);
 __decorate([
-    (0, common_1.Delete)(':id'),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    (0, common_1.Delete)(':id/:userId'),
+    (0, roles_decorator_1.Roles)('MANAGER', 'TEAM_LEADER', 'BID_MANAGER', 'ADMIN'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Param)('userId', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Number]),
+    __metadata("design:paramtypes", [Number, Number]),
     __metadata("design:returntype", Promise)
 ], TrainingController.prototype, "deleteTraining", null);
 exports.TrainingController = TrainingController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('EMPLOYEE'),
     (0, common_1.Controller)('trainings'),
     __metadata("design:paramtypes", [training_service_1.TrainingService])
 ], TrainingController);

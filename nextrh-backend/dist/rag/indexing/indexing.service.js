@@ -12,131 +12,191 @@ var IndexingService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IndexingService = void 0;
 const common_1 = require("@nestjs/common");
-const uuid_1 = require("uuid");
-const cv_service_1 = require("../cv.service");
+const config_1 = require("@nestjs/config");
+const employeeProfile_service_1 = require("../../Employee/employeeProfile.service");
 const embedding_service_1 = require("../embedding/embedding.service");
 const vector_service_1 = require("../vector/vector.service");
-const event_emitter_1 = require("@nestjs/event-emitter");
+const chunking_service_1 = require("../chunking/chunking.service");
+const vector_mapping_repository_1 = require("./vector-mapping.repository");
+const CHUNK_TYPES = ['profile', 'projects', 'credentials'];
 let IndexingService = IndexingService_1 = class IndexingService {
-    constructor(cvService, embeddingService, vectorService) {
-        this.cvService = cvService;
+    constructor(configService, employeeProfileService, embeddingService, vectorService, chunkingService, mappingRepository) {
+        this.configService = configService;
+        this.employeeProfileService = employeeProfileService;
         this.embeddingService = embeddingService;
         this.vectorService = vectorService;
+        this.chunkingService = chunkingService;
+        this.mappingRepository = mappingRepository;
         this.logger = new common_1.Logger(IndexingService_1.name);
     }
-    async handleCertificationSaved(payload) {
-        const certId = payload?.certId;
-        if (!certId) {
-            this.logger.error(`❌ Impossible de ré-indexer : 'certId' est introuvable dans le payload de l'événement.`);
-            return;
+    async reindexUser(userId) {
+        if (!userId) {
+            this.logger.error('reindexUser called with no userId');
+            return { points: 0, status: 'error', error: 'missing userId' };
         }
-        this.logger.log(`🔄 Ré-indexation de la certification #${certId}`);
-        const cert = await this.cvService.getCertificationWithCvContext(certId);
-        if (!cert)
-            return;
-        await this.vectorService.deleteByEntityId(certId, 'certification');
-        const identityHeader = `CANDIDAT: ${cert.full_name}\nPROFESSION: ${cert.profession || 'N/A'}\n`;
-        const text = `${identityHeader}CERTIFICATION: ${cert.cert_name}\nORGANISME: ${cert.provider}\nDATE: ${cert.issue_date}`;
-        const point = await this.createVectorPoint(text, cert, 'certification', certId);
-        await this.vectorService.insertBatch([point]);
-    }
-    async handleCertificationDeleted(payload) {
-        this.logger.log(`🗑️ Suppression du vecteur pour la certification #${payload.certId}`);
-        await this.vectorService.deleteByEntityId(payload.certId, 'certification');
-    }
-    async indexAllCVs() {
-        this.logger.log('🚀 Démarrage de l\'indexation globale des CVs...');
-        await this.vectorService.recreateCollection();
-        this.logger.log('recreated the collection');
-        const cvs = await this.cvService.getAllCVs();
-        let totalPointsCount = 0;
-        for (const cv of cvs) {
+        try {
+            const [cv, experiences, educations, projects, certifications, trainings] = await Promise.all([
+                this.employeeProfileService.getCVByUserId(userId),
+                this.employeeProfileService.getExperiencesByUserId(userId),
+                this.employeeProfileService.getEducationByUserId(userId),
+                this.employeeProfileService.getProjectsByUserId(userId),
+                this.employeeProfileService.getCertificationsByUserId(userId),
+                this.employeeProfileService.getTrainingsByUserId(userId),
+            ]);
+            if (!cv) {
+                this.logger.warn(`No active profile found for user #${userId}`);
+                return { points: 0, status: 'no_profile' };
+            }
+            const profile = {
+                cv_id: cv.cv_id,
+                full_name: cv.full_name,
+                profession: cv.profession,
+                email: cv.email,
+                address: cv.address,
+                skills: cv.skills,
+                educations,
+                experiences,
+                projects,
+                certifications,
+                trainings,
+            };
+            const chunks = this.chunkingService.chunkCandidate(profile);
+            if (chunks.length === 0) {
+                this.logger.warn(`No chunks produced for user #${userId}`);
+                return { points: 0, status: 'no_profile' };
+            }
+            const currentGen = cv.active_generation || 1;
+            const targetGen = currentGen === 1 ? 2 : 1;
+            const newPoints = await this.embedChunks(chunks, userId, cv.full_name, cv.cv_id, targetGen);
+            this.logger.log(`[DEBUG-QDRANT] Ready to insert point example: ID=${newPoints[0]?.id}, VectorLength=${newPoints[0]?.vector?.length}`);
+            const oldPointIds = await this.mappingRepository.getVectorPointIdsByGeneration(userId, currentGen);
             try {
-                if (!cv.cv_id)
-                    continue;
-                const points = [];
-                const identityHeader = `CANDIDAT: ${cv.full_name}\nPROFESSION: ${cv.profession || 'N/A'}\n`;
-                const profileText = `${identityHeader}INFOS CONTACT & RÉSUMÉ:\nEmail: ${cv.email}\nAdresse: ${cv.address}\nCompétences: ${cv.skills}`;
-                points.push(await this.createVectorPoint(profileText, cv, 'profile', cv.cv_id));
-                const certifications = await this.cvService.getCertificationsByCvId(cv.cv_id);
-                for (const cert of certifications) {
-                    const text = `${identityHeader}CERTIFICATION: ${cert.cert_name}\nORGANISME: ${cert.provider}\nOBTENUE LE: ${cert.issue_date || 'N/A'}`;
-                    points.push(await this.createVectorPoint(text, cv, 'certification', cert.certId));
-                }
-                const education = await this.cvService.getEducationByCvId(cv.cv_id);
-                for (const edu of education) {
-                    const text = `${identityHeader}FORMATION: ${edu.degree}\nINSTITUTION: ${edu.institution}\nDOMAINE: ${edu.field_of_study}\nPÉRIODE: ${edu.start_year}-${edu.end_year}`;
-                    points.push(await this.createVectorPoint(text, cv, 'education', edu.education_id));
-                }
-                const projects = await this.cvService.getProjectsByCvId(cv.cv_id);
-                for (const proj of projects) {
-                    const text = `${identityHeader}PROJET: ${proj.name}\nCLIENT: ${proj.client}\nDATES: ${proj.start_date}-${proj.end_date}\nDESCRIPTION: ${proj.description}\nTECHNO: ${proj.technologies}`;
-                    points.push(await this.createVectorPoint(text, cv, 'project', proj.id));
-                }
-                const experiences = await this.cvService.getExperiencesByCvId(cv.cv_id);
-                for (const exp of experiences) {
-                    const text = `${identityHeader}EXPÉRIENCE: ${exp.role}\nENTREPRISE: ${exp.company}\nDATES: ${exp.start_date}-${exp.end_date}\nMISSIONS: ${exp.description}`;
-                    points.push(await this.createVectorPoint(text, cv, 'experience', exp.id));
-                }
-                if (points.length > 0) {
-                    await this.vectorService.insertBatch(points);
-                    totalPointsCount += points.length;
-                    this.logger.log(`✅ Indexé : ${cv.full_name} (${points.length} vecteurs)`);
-                }
+                await this.insertWithRetry(newPoints);
             }
             catch (err) {
-                this.logger.error(`❌ Erreur lors de l'indexation du CV #${cv.cv_id}: ${err.message}`);
+                this.logger.error(`Insert failed for user #${userId} on targetGen ${targetGen}. Old index preserved.`);
+                await this.mappingRepository.deleteMappingsByGeneration(userId, targetGen).catch(delErr => {
+                    this.logger.warn(`Orphan mappings cleanup failed for user #${userId}: ${delErr.message}`);
+                });
+                return { points: 0, status: 'error', error: err.message };
+            }
+            await this.mappingRepository.updateActiveGeneration(cv.cv_id, targetGen);
+            if (oldPointIds.length > 0) {
+                await Promise.all([
+                    this.deleteWithRetry(oldPointIds),
+                    this.mappingRepository.deleteMappingsByGeneration(userId, currentGen),
+                ]).catch(err => {
+                    this.logger.warn(`Old generation ${currentGen} cleanup failed for user #${userId}: ${err.message}`);
+                });
+            }
+            this.logger.log(`User #${userId} indexed: ${newPoints.length} vectors on Gen ${targetGen}`);
+            return { points: newPoints.length, status: 'success' };
+        }
+        catch (err) {
+            this.logger.error(`Re-indexing failed for user #${userId}: ${err.message}`);
+            return { points: 0, status: 'error', error: err.message };
+        }
+    }
+    async indexAllCVs() {
+        this.logger.log('Starting full database re-indexing...');
+        await this.vectorService.recreateCollection();
+        await this.mappingRepository.clearAllVectorMappings();
+        this.logger.log('Collection and mapping tables cleared.');
+        const cvs = await this.employeeProfileService.getAllCVs();
+        let totalPointsCount = 0;
+        const failedUsers = [];
+        const userDelayMs = this.configService.get('INDEXING_USER_DELAY_MS', 0);
+        for (let i = 0; i < cvs.length; i++) {
+            const cv = cvs[i];
+            if (!cv.user_id)
+                continue;
+            const result = await this.reindexUser(cv.user_id);
+            if (result.status === 'success') {
+                totalPointsCount += result.points;
+            }
+            else if (result.status === 'error') {
+                failedUsers.push(cv.user_id);
+            }
+            if (userDelayMs > 0 && i < cvs.length - 1) {
+                this.logger.debug(`Waiting ${userDelayMs}ms before processing next user...`);
+                await new Promise(resolve => setTimeout(resolve, userDelayMs));
             }
         }
-        this.logger.log(`🏁 Indexation terminée. Total : ${cvs.length} CVs, ${totalPointsCount} points vectoriels.`);
-        return { totalCVs: cvs.length, totalPoints: totalPointsCount };
+        if (failedUsers.length > 0) {
+            this.logger.warn(`Indexing completed with ${failedUsers.length} failures: [${failedUsers.join(', ')}]`);
+        }
+        this.logger.log(`Full index complete: ${cvs.length} users, ${totalPointsCount} vectors, ${failedUsers.length} failures.`);
+        return { totalUsers: cvs.length, totalPoints: totalPointsCount, failedUsers };
     }
-    async createVectorPoint(text, cv, type, entityId) {
-        const vector = await this.embeddingService.embed(text);
-        const MY_NAMESPACE = '1b671a64-40d5-491e-99b0-da01ff1f3341';
-        const deterministicId = (0, uuid_1.v5)(`${type}-${entityId}`, MY_NAMESPACE);
-        return {
-            id: deterministicId,
-            vector: vector,
-            payload: {
-                text: text,
-                type: type,
-                cv_id: cv.cv_id,
-                entity_id: entityId,
-                full_name: cv.full_name,
-                source_table: this.mapTypeToTable(type),
-                indexed_at: new Date().toISOString()
-            },
-        };
+    async embedChunks(chunks, userId, fullName, cvId, targetGen) {
+        return Promise.all(chunks.map(async (chunk) => {
+            const chunkType = CHUNK_TYPES[chunk.chunkIndex] ?? 'profile';
+            const sourceTable = this.mapTypeToTable(chunkType);
+            const [vector, sequentialId] = await Promise.all([
+                this.embeddingService.embed(chunk.text),
+                this.mappingRepository.getOrCreateMappingId(userId, sourceTable, cvId, chunk.chunkIndex, targetGen),
+            ]);
+            return {
+                id: sequentialId,
+                vector,
+                payload: {
+                    text: chunk.text,
+                    type: chunkType,
+                    user_id: userId,
+                    entity_id: cvId,
+                    full_name: fullName,
+                    source_table: sourceTable,
+                    generation: targetGen,
+                    indexed_at: new Date().toISOString(),
+                },
+            };
+        }));
+    }
+    async insertWithRetry(points, retries = 3, delay = 2000) {
+        for (let i = 0; i < retries; i++) {
+            try {
+                await this.vectorService.insertBatch(points);
+                return;
+            }
+            catch (err) {
+                if (i === retries - 1)
+                    throw err;
+                this.logger.warn(`Vector insert failed (attempt ${i + 1}/${retries}): ${err.message}. Retrying in ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+    }
+    async deleteWithRetry(pointIds, retries = 3, delay = 2000) {
+        for (let i = 0; i < retries; i++) {
+            try {
+                await this.vectorService.deletePointsBatch(pointIds);
+                return;
+            }
+            catch (err) {
+                if (i === retries - 1)
+                    throw err;
+                this.logger.warn(`Vector delete failed (attempt ${i + 1}/${retries}): ${err.message}. Retrying in ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
     }
     mapTypeToTable(type) {
         const mapping = {
-            profile: 'cvs',
-            certification: 'certifications',
-            project: 'projects',
-            education: 'education',
-            experience: 'experiences'
+            profile: 'cvs,educations,experiences',
+            projects: 'projects',
+            credentials: 'certifications,trainings',
         };
-        return mapping[type] || 'unknown';
+        return mapping[type] ?? 'unknown';
     }
 };
 exports.IndexingService = IndexingService;
-__decorate([
-    (0, event_emitter_1.OnEvent)('certification.saved'),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], IndexingService.prototype, "handleCertificationSaved", null);
-__decorate([
-    (0, event_emitter_1.OnEvent)('certification.deleted'),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], IndexingService.prototype, "handleCertificationDeleted", null);
 exports.IndexingService = IndexingService = IndexingService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [cv_service_1.CvService,
+    __metadata("design:paramtypes", [config_1.ConfigService,
+        employeeProfile_service_1.EmployeeProfileService,
         embedding_service_1.EmbeddingService,
-        vector_service_1.VectorService])
+        vector_service_1.VectorService,
+        chunking_service_1.ChunkingService,
+        vector_mapping_repository_1.VectorMappingRepository])
 ], IndexingService);
 //# sourceMappingURL=indexing.service.js.map

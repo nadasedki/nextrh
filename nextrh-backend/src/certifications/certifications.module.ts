@@ -8,7 +8,7 @@ import { User } from '../users/entities/user.entity';
 import { GoogleCalendarModule } from '../google-calendar/google-calendar.module';
 import { ScoringModule } from 'src/scoring/scoring.module';
 import { CertificationsListener } from './CertificationsListener';
-import { CertificationsParserService } from './services/certifications-parser.service';
+import { CertificationsParserService } from './services/certifications-extraction.service';
 @Module({
   imports: [TypeOrmModule.forFeature([Certification,User]),ParserModule,GoogleCalendarModule,ScoringModule],
   controllers: [CertificationsController],

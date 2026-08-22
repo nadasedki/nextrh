@@ -22,6 +22,8 @@ export declare class EmployeesController {
         cvLastUpdated: string;
     }>;
     getMyCvData(req: any): Promise<{
+        id: number;
+        filePath: string;
         name: string;
         profession: string;
         email: string;
@@ -33,6 +35,13 @@ export declare class EmployeesController {
             id: number;
             name: string;
             client: string;
+            startDate: Date;
+            endDate: Date;
+            description: string;
+        }[];
+        experiences: {
+            id: number;
+            company: string;
             startDate: Date;
             endDate: Date;
             description: string;
@@ -98,7 +107,7 @@ export declare class EmployeesController {
         role: import("../users/entities/role.entity").Role;
         created_at: Date;
         updated_at: Date;
-        teams: import("../users/entities/team.entity").Team[];
+        teams: import("../teams/entities/team.entity").Team[];
         certifications: import("../certifications/entities/certification.entity").Certification[];
         trainings: import("../training/entities/training.entity").Training[];
         projects: import("../project/entities/project.entity").Project[];

@@ -12,15 +12,19 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TeamsController = void 0;
+exports.TeamsController = exports.CurrentUser = void 0;
 const common_1 = require("@nestjs/common");
 const teams_service_1 = require("./teams.service");
 const create_team_dto_1 = require("./dto/create-team.dto");
-const add_member_dto_1 = require("./dto/add-member.dto");
-const roles_guard_1 = require("../auth/roles.guard");
+const invite_member_dto_1 = require("./dto/invite-member.dto");
+const roles_guard_1 = require("../auth/guards/roles.guard");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_decorator_1 = require("../auth/roles.decorator");
 const common_2 = require("@nestjs/common");
+exports.CurrentUser = (0, common_2.createParamDecorator)((data, ctx) => {
+    const request = ctx.switchToHttp().getRequest();
+    return request.user;
+});
 let TeamsController = class TeamsController {
     constructor(teamsService) {
         this.teamsService = teamsService;
@@ -31,31 +35,26 @@ let TeamsController = class TeamsController {
     findAll() {
         return this.teamsService.findAll();
     }
-    async addMember(req, email) {
-        const leaderId = req.user.sub;
-        return this.teamsService.addMemberByEmail(leaderId, email);
+    async addMember(user, dto) {
+        return this.teamsService.addMemberByEmail(user.userId, dto.email);
     }
-    async getMyTeam(req) {
-        const leaderId = req.user.sub;
-        return this.teamsService.getMyTeam(leaderId);
+    async getMyTeam(user) {
+        return this.teamsService.getMyTeam(user.userId);
     }
-    removeMember(dto) {
-        return this.teamsService.removeMember(dto);
+    async removeMember(user, memberId) {
+        return this.teamsService.removeMemberFromLeaderTeam(user.userId, memberId);
+    }
+    async getMyTeamMembers(user) {
+        return this.teamsService.findMembersByManager(user.userId);
+    }
+    async getMyTeamStats(user) {
+        return this.teamsService.calculateTeamStats(user.userId);
+    }
+    async getMyTeamCertifications(user) {
+        return this.teamsService.findAllTeamCertifications(user.userId);
     }
     findOne(id) {
         return this.teamsService.findOne(id);
-    }
-    async getMyTeamMembers(req) {
-        const leaderId = req.user.sub;
-        return this.teamsService.findMembersByManager(leaderId);
-    }
-    async getMyTeamStats(req) {
-        const leaderId = req.user.sub;
-        return this.teamsService.calculateTeamStats(leaderId);
-    }
-    async getMyTeamCertifications(req) {
-        const leaderId = req.user.sub;
-        return this.teamsService.findAllTeamCertifications(leaderId);
     }
 };
 exports.TeamsController = TeamsController;
@@ -76,17 +75,17 @@ __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('TEAM_LEADER'),
     (0, common_1.Post)('members'),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Body)('email')),
+    __param(0, (0, exports.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object, invite_member_dto_1.InviteMemberDto]),
     __metadata("design:returntype", Promise)
 ], TeamsController.prototype, "addMember", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('TEAM_LEADER'),
     (0, common_1.Get)('my-team'),
-    __param(0, (0, common_1.Req)()),
+    __param(0, (0, exports.CurrentUser)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
@@ -94,24 +93,18 @@ __decorate([
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('TEAM_LEADER'),
-    (0, common_1.Post)('remove-member'),
-    __param(0, (0, common_1.Body)()),
+    (0, common_1.Delete)('members/:id'),
+    __param(0, (0, exports.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [add_member_dto_1.AddMemberDto]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [Object, Number]),
+    __metadata("design:returntype", Promise)
 ], TeamsController.prototype, "removeMember", null);
-__decorate([
-    (0, common_1.Get)(':id'),
-    __param(0, (0, common_2.Param)('id', common_2.ParseIntPipe)),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
-    __metadata("design:returntype", void 0)
-], TeamsController.prototype, "findOne", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('TEAM_LEADER'),
     (0, common_1.Get)('my-team/members'),
-    __param(0, (0, common_1.Req)()),
+    __param(0, (0, exports.CurrentUser)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
@@ -120,7 +113,7 @@ __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('TEAM_LEADER'),
     (0, common_1.Get)('my-team/stats'),
-    __param(0, (0, common_1.Req)()),
+    __param(0, (0, exports.CurrentUser)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
@@ -129,11 +122,18 @@ __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('TEAM_LEADER'),
     (0, common_1.Get)('my-team/certifications'),
-    __param(0, (0, common_1.Req)()),
+    __param(0, (0, exports.CurrentUser)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], TeamsController.prototype, "getMyTeamCertifications", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", void 0)
+], TeamsController.prototype, "findOne", null);
 exports.TeamsController = TeamsController = __decorate([
     (0, common_1.Controller)('teams'),
     __metadata("design:paramtypes", [teams_service_1.TeamsService])

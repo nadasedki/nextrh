@@ -33,71 +33,80 @@ let CvService = class CvService {
         address,
         skills
       FROM public.cvs
+      WHERE user_id IS NOT NULL
     `);
+    }
+    async getCVByUserId(userId) {
+        const rows = await this.dataSource.query(`
+      SELECT 
+        cv_id,
+        user_id,
+        full_name,
+        profession,
+        email,
+        phone,
+        fax,
+        address,
+        skills
+      FROM public.cvs
+      WHERE user_id = $1
+      LIMIT 1
+    `, [userId]);
+        return rows.length > 0 ? rows[0] : null;
     }
     async getAllCertifications() {
         return await this.dataSource.query(`
       SELECT * FROM public.certifications
     `);
     }
-    async getEducationByCvId(cvId) {
-        return await this.dataSource.query(`SELECT * FROM public.education WHERE "cvCvId" = $1`, [cvId]);
+    async getEducationByUserId(userId) {
+        return await this.dataSource.query(`SELECT e.* FROM public.educations e 
+       JOIN public.cvs cv ON e."cvCvId" = cv.cv_id 
+       WHERE cv.user_id = $1`, [userId]);
     }
-    async getProjectsByCvId(cvId) {
-        return await this.dataSource.query(`SELECT * FROM public.projects WHERE "cvCvId" = $1`, [cvId]);
+    async getProjectsByUserId(userId) {
+        return await this.dataSource.query(`SELECT p.* FROM public.projects p 
+       JOIN public.cvs cv ON p."cvCvId" = cv.cv_id 
+       WHERE cv.user_id = $1`, [userId]);
     }
-    async getExperiencesByCvId(cvId) {
-        return await this.dataSource.query(`SELECT * FROM public.experiences WHERE "cvCvId" = $1`, [cvId]);
+    async getExperiencesByUserId(userId) {
+        return await this.dataSource.query(`SELECT e.* FROM public.experiences e 
+       JOIN public.cvs cv ON e."cvCvId" = cv.cv_id 
+       WHERE cv.user_id = $1`, [userId]);
     }
-    async getAllUnifiedProfiles() {
-        const cvs = await this.getAllCVs();
-        const certs = await this.getAllCertifications();
-        const profiles = [];
-        for (const cv of cvs) {
-            const identityKey = (cv.full_name || '').toLowerCase();
-            const profileCerts = certs.filter(c => (c.certificate_holder || '').toLowerCase() === identityKey);
-            const education = await this.getEducationByCvId(cv.cv_id);
-            const projects = await this.getProjectsByCvId(cv.cv_id);
-            const experiences = await this.getExperiencesByCvId(cv.cv_id);
-            profiles.push({
-                ...cv,
-                identity_key: identityKey,
-                certifications: profileCerts,
-                education,
-                projects,
-                experiences,
-            });
-        }
-        return profiles;
+    async getCertificationsByUserId(userId) {
+        return await this.dataSource.query(`SELECT c.* FROM public.certifications c
+       JOIN public.cvs cv ON c."cvCvId" = cv.cv_id
+       WHERE cv.user_id = $1`, [userId]);
+    }
+    async getTrainingsByUserId(userId) {
+        return await this.dataSource.query(`
+      SELECT 
+        training_id,
+        user_id,
+        training_name,
+        provider,
+        description,
+        completion_date,
+        duration
+      FROM public.training_sessions
+      WHERE user_id = $1
+    `, [userId]);
+    }
+    async getCertificationWithCvContext(certId) {
+        const [result] = await this.dataSource.query(`
+      SELECT c.*, cv.full_name, cv.profession, cv.user_id, cv.cv_id
+      FROM certifications c
+      JOIN cvs cv ON c."cvCvId" = cv.cv_id
+      WHERE c.cert_id = $1
+    `, [certId]);
+        return result;
     }
     async getAllNames() {
         const result = await this.dataSource.query(`
       SELECT DISTINCT full_name FROM public.cvs WHERE full_name IS NOT NULL
     `);
         return result.map(r => r.full_name);
-    }
-    async getCertificationsByCvId(cvId) {
-        try {
-            const result = await this.dataSource.query(`
-      SELECT *
-      FROM public.certifications
-      WHERE "cvCvId" = $1
-      `, [cvId]);
-            return result;
-        }
-        catch (err) {
-            console.error('Erreur SQL certifications by holder:', err.message);
-            return [];
-        }
-    }
-    async getCertificationWithCvContext(certId) {
-        const [result] = await this.dataSource.query(`
-    SELECT c.*, cv.full_name, cv.profession, cv.cv_id
-    FROM certifications c
-    JOIN cvs cv ON c."cvCvId" = cv.cv_id
-    WHERE c.cert_id = $1
-  `, [certId]);
-        return result;
     }
 };
 exports.CvService = CvService;

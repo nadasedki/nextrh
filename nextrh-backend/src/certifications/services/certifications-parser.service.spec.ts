@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CertificationsParserService } from './certifications-parser.service';
+import { CertificationsParserService } from './certifications-extraction.service';
 
 describe('CertificationsParserService', () => {
   let service: CertificationsParserService;

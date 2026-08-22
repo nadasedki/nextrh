@@ -1,21 +1,24 @@
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { Project } from '../project/entities/project.entity';
 import { Training } from '../training/entities/training.entity';
 import { Certification } from '../certifications/entities/certification.entity';
 import { Cv } from '../cvs/entities/cv.entity';
-import { Team } from 'src/users/entities/team.entity';
+import { Team } from 'src/teams/entities/team.entity';
 import { Education } from 'src/education/entities/education.entity';
+import { Experience } from 'src/experience/entities/experience.entity';
 export declare class EmployeesService {
+    private readonly dataSource;
     private userRepository;
     private projectRepository;
     private trainingRepository;
     private certificationRepository;
     private cvRepository;
     private educationRepository;
+    private experienceRepository;
     private certRepository;
     private teamRepository;
-    constructor(userRepository: Repository<User>, projectRepository: Repository<Project>, trainingRepository: Repository<Training>, certificationRepository: Repository<Certification>, cvRepository: Repository<Cv>, educationRepository: Repository<Education>, certRepository: Repository<Certification>, teamRepository: Repository<Team>);
+    constructor(dataSource: DataSource, userRepository: Repository<User>, projectRepository: Repository<Project>, trainingRepository: Repository<Training>, certificationRepository: Repository<Certification>, cvRepository: Repository<Cv>, educationRepository: Repository<Education>, experienceRepository: Repository<Experience>, certRepository: Repository<Certification>, teamRepository: Repository<Team>);
     getDashboardData(userId: number): Promise<{
         title: string;
         yearsOfExperience: number;
@@ -36,6 +39,8 @@ export declare class EmployeesService {
         cvLastUpdated: string;
     }>;
     getFullEmployeeCv(userId: number): Promise<{
+        id: number;
+        filePath: string;
         name: string;
         profession: string;
         email: string;
@@ -47,6 +52,13 @@ export declare class EmployeesService {
             id: number;
             name: string;
             client: string;
+            startDate: Date;
+            endDate: Date;
+            description: string;
+        }[];
+        experiences: {
+            id: number;
+            company: string;
             startDate: Date;
             endDate: Date;
             description: string;

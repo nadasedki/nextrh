@@ -67,8 +67,7 @@ const TrainingProjectsPage: React.FC = () => {
 
    const [isExperienceDialogOpen, setIsExperienceDialogOpen] = useState(false);
    const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
-   const [isTrainingDialogOpen, setIsTrainingDialogOpen] = useState(false);
-
+  
  const [experienceForm, setExperienceForm] = useState({
     company: '',
     role: '',
@@ -86,13 +85,7 @@ const TrainingProjectsPage: React.FC = () => {
     description: '',
     technologies: '',
   });
-const [trainingForm, setTrainingForm] = useState({
-  training_name: '',
-  provider: '',
-  description: '',
-  completion_date: '',
-  duration: '',
-});
+
  const formatDate = (dateString?: string | null) => {
   if (!dateString) return 'N/A';
 
@@ -109,7 +102,6 @@ const formatDateForInput = (dateString?: string | null) => {
 // Track ID of the item being edited (null if adding new)
   const [editingExperienceId, setEditingExperienceId] = useState<number | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
-  const [editingTrainingId, setEditingTrainingId] = useState<number | null>(null);
   // ===============================
   // FETCH experiences & PROJECTS
   // ===============================
@@ -218,24 +210,7 @@ if (tRes.ok) {
       setProjects(prev => prev.filter(p => p.id !== id));
     } catch (err) { console.error(err); }
   };
-const handleDeleteTraining = async (id: number) => {
-  if (!confirm('Are you sure?')) return;
 
-  try {
-    await fetch(`http://localhost:3000/trainings/${id}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    setTrainings(prev =>
-      prev.filter(t => t.training_id !== id)
-    );
-  } catch (err) {
-    console.error(err);
-  }
-};
   // ===============================
   // EDIT (OPEN DIALOG) HANDLERS
   // ===============================
@@ -265,21 +240,7 @@ const handleDeleteTraining = async (id: number) => {
     setIsProjectDialogOpen(true);
   };
 
-  const openEditTraining = (training: Training) => {
-  setEditingTrainingId(training.training_id);
 
-  setTrainingForm({
-    training_name: training.training_name,
-    provider: training.provider,
-    description: training.description || '',
-    completion_date: formatDateForInput(
-      training.completion_date
-    ),
-    duration: training.duration || '',
-  });
-
-  setIsTrainingDialogOpen(true);
-};
  // ===============================
   // ADD EXPERIENCE
   // ===============================
@@ -424,53 +385,7 @@ const handleAddExperience = async () => {
       console.error('Error adding project:', err);
     }
   };*/
-const handleAddTraining = async () => {
-  const method = editingTrainingId ? 'PATCH' : 'POST';
 
-  const url = editingTrainingId
-    ? `http://localhost:3000/trainings/${editingTrainingId}`
-    : `http://localhost:3000/trainings`;
-
-  try {
-    const res = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(trainingForm),
-    });
-
-    if (!res.ok) {
-      throw new Error('Failed to save training');
-    }
-
-    const data = await res.json();
-
-    if (editingTrainingId) {
-      setTrainings(prev =>
-        prev.map(t =>
-          t.training_id === editingTrainingId ? data : t
-        )
-      );
-    } else {
-      setTrainings(prev => [...prev, data]);
-    }
-
-    setTrainingForm({
-      training_name: '',
-      provider: '',
-      description: '',
-      completion_date: '',
-      duration: '',
-    });
-
-    setEditingTrainingId(null);
-    setIsTrainingDialogOpen(false);
-  } catch (err) {
-    console.error(err);
-  }
-};
   if (loading) return <p>Loading...</p>;
 
   return (
@@ -672,112 +587,8 @@ const handleAddTraining = async () => {
         {/* ================= TRAININGS ================= */}
         <TabsContent value="trainings" className="space-y-4">
 
-  <Button
-    onClick={() => {
-      setEditingTrainingId(null);
+  
 
-      setTrainingForm({
-        training_name: '',
-        provider: '',
-        description: '',
-        completion_date: '',
-        duration: '',
-      });
-
-      setIsTrainingDialogOpen(true);
-    }}
-  >
-    <Plus className="h-4 w-4 mr-2" />
-    Add Training
-  </Button>
-
-  <Dialog
-    open={isTrainingDialogOpen}
-    onOpenChange={setIsTrainingDialogOpen}
-  >
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>
-          {editingTrainingId
-            ? 'Edit Training'
-            : 'Add Training'}
-        </DialogTitle>
-      </DialogHeader>
-
-      <div className="space-y-4">
-
-        <Input
-          placeholder="Training Name"
-          value={trainingForm.training_name}
-          onChange={(e) =>
-            setTrainingForm({
-              ...trainingForm,
-              training_name: e.target.value,
-            })
-          }
-        />
-
-        <Input
-          placeholder="Provider"
-          value={trainingForm.provider}
-          onChange={(e) =>
-            setTrainingForm({
-              ...trainingForm,
-              provider: e.target.value,
-            })
-          }
-        />
-
-        <Input
-          type="date"
-          value={trainingForm.completion_date}
-          onChange={(e) =>
-            setTrainingForm({
-              ...trainingForm,
-              completion_date: e.target.value,
-            })
-          }
-        />
-
-        <Input
-          placeholder="Duration"
-          value={trainingForm.duration}
-          onChange={(e) =>
-            setTrainingForm({
-              ...trainingForm,
-              duration: e.target.value,
-            })
-          }
-        />
-
-        <Textarea
-          placeholder="Description"
-          value={trainingForm.description}
-          onChange={(e) =>
-            setTrainingForm({
-              ...trainingForm,
-              description: e.target.value,
-            })
-          }
-        />
-      </div>
-
-      <DialogFooter>
-        <Button
-          variant="outline"
-          onClick={() =>
-            setIsTrainingDialogOpen(false)
-          }
-        >
-          Cancel
-        </Button>
-
-        <Button onClick={handleAddTraining}>
-          Save
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
 
   <div className="grid gap-4 md:grid-cols-2">
     {trainings.map((training) => (
@@ -788,28 +599,9 @@ const handleAddTraining = async () => {
         <CardContent className="p-4">
 
           <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() =>
-                openEditTraining(training)
-              }
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
+           
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-destructive"
-              onClick={() =>
-                handleDeleteTraining(
-                  training.training_id
-                )
-              }
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+           
           </div>
 
           <h3 className="font-semibold">

@@ -14,10 +14,15 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
+const throttler_1 = require("@nestjs/throttler");
 const auth_service_1 = require("./auth.service");
 const register_dto_1 = require("./dto/register.dto");
+const login_dto_1 = require("./dto/login.dto");
 const forgot_password_dto_1 = require("./dto/forgot-password.dto");
 const reset_password_dto_1 = require("./dto/reset-password.dto");
+const jwt_auth_guard_1 = require("./guards/jwt-auth.guard");
+const roles_guard_1 = require("./guards/roles.guard");
+const roles_decorator_1 = require("./roles.decorator");
 let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
@@ -25,16 +30,8 @@ let AuthController = class AuthController {
     register(dto) {
         return this.authService.register(dto);
     }
-    async login(loginDto) {
-        try {
-            return await this.authService.login(loginDto);
-        }
-        catch (err) {
-            if (err instanceof common_1.UnauthorizedException) {
-                throw err;
-            }
-            throw new common_1.UnauthorizedException('Invalid credentials');
-        }
+    login(loginDto) {
+        return this.authService.login(loginDto);
     }
     forgotPassword(dto) {
         return this.authService.forgotPassword(dto);
@@ -46,6 +43,8 @@ let AuthController = class AuthController {
 exports.AuthController = AuthController;
 __decorate([
     (0, common_1.Post)('register'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN', 'TEAM_LEADER'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [register_dto_1.RegisterDto]),
@@ -53,13 +52,17 @@ __decorate([
 ], AuthController.prototype, "register", null);
 __decorate([
     (0, common_1.Post)('login'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60000, limit: 5 } }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
+    __metadata("design:paramtypes", [login_dto_1.LoginDto]),
+    __metadata("design:returntype", void 0)
 ], AuthController.prototype, "login", null);
 __decorate([
     (0, common_1.Post)('forgot-password'),
+    (0, throttler_1.Throttle)({ default: { ttl: 60000, limit: 3 } }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [forgot_password_dto_1.ForgotPasswordDto]),
@@ -67,6 +70,7 @@ __decorate([
 ], AuthController.prototype, "forgotPassword", null);
 __decorate([
     (0, common_1.Post)('reset-password'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [reset_password_dto_1.ResetPasswordDto]),

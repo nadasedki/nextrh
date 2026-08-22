@@ -1,7 +1,8 @@
-import { ConfigService } from '@nestjs/config';
+import { RagStructuredOutput } from '../types/rag-types';
+import { ILlmEngine } from '../../llm/llm.interface';
 export declare class LlmService {
-    private configService;
-    private chatModel;
-    constructor(configService: ConfigService);
-    generate(prompt: string): Promise<string>;
+    private readonly llmEngine;
+    private readonly logger;
+    constructor(llmEngine: ILlmEngine);
+    generate(prompt: string, schema: object): Promise<RagStructuredOutput>;
 }

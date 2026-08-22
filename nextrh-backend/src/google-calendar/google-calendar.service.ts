@@ -6,7 +6,6 @@ export class GoogleCalendarService {
   private oauth2Client;
 
   constructor() {
-    // On utilise process.env pour ne pas exposer les clés secrètes dans le code
     this.oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
@@ -82,7 +81,7 @@ export class GoogleCalendarService {
       dateTime: endTime.toISOString(),
       timeZone: 'Africa/Tunis',
     },
-    // CRITIQUE : Ajouter le candidat ici pour qu'il reçoive l'e-mail d'invitation
+    //  :le candidat ici pour qu'il reçoive l'e-mail d'invitation
     attendees: [
       { email: candidateEmail } 
     ],
@@ -99,7 +98,7 @@ export class GoogleCalendarService {
     const res = await calendar.events.insert({
       calendarId: 'primary',
       requestBody: event,
-      sendUpdates: 'all', // OBLIGATOIRE pour envoyer les e-mails d'invitation
+      sendUpdates: 'all', //  pour envoyer les e-mails d'invitation
     });
 
     return { success: true, link: res.data.htmlLink };
@@ -155,73 +154,4 @@ async scheduleEmployeeReminder(
 
 }
 
-//real code 
-// src/google-calendar/google-calendar.service.ts
 
-/*async scheduleEmployeeReminder(
-  employeeName: string,
-  employeeEmail: string,
-  certName: string,
-  expiryDateStr: string,
-) {
-  const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
-
-  // 1. Calcul de la DATE D'ALERTE (Date d'expiration - 60 jours)
-  const expiryDate = new Date(expiryDateStr);
-  const alertDate = new Date(expiryDate);
-  alertDate.setDate(alertDate.getDate() - 60);
-
-  // Vérification : si l'alerte est déjà passée, on la met à "maintenant"
-  const now = new Date();
-  if (alertDate < now) {
-    alertDate.setTime(now.getTime() + 1 * 60000); // Dans 10 minutes
-  } else {
-    alertDate.setHours(9, 0, 0); // À 09h00 du matin le jour J-60
-  }
-
-  // 2. Création de l'événement DIRECTEMENT à la date d'alerte
-  const event = {
-    // Le titre qui apparaîtra dans l'agenda le jour de l'envoi
-    summary: `✉️ ALERTE ENVOYÉE : Expiration ${certName} (${employeeName})`,
-    description: `
-      Cet événement confirme qu'un email de rappel a été envoyé à l'employé.
-      ---
-      Employé : ${employeeName}
-      Email : ${employeeEmail}
-      Certification : ${certName}
-      Date d'expiration finale : ${expiryDate.toLocaleDateString()}
-    `,
-    start: {
-      dateTime: alertDate.toISOString(),
-      timeZone: 'Africa/Tunis',
-    },
-    end: {
-      dateTime: new Date(alertDate.getTime() + 3600000).toISOString(), // Durée 1h
-      timeZone: 'Africa/Tunis',
-    },
-    // On ajoute l'employé en invité pour que Google lui envoie le mail
-    attendees: [
-      { email: employeeEmail }
-    ],
-    reminders: {
-      useDefault: false,
-      overrides: [
-        { method: 'email', minutes: 0 }, // Envoi du mail à l'employé à l'instant T
-        { method: 'popup', minutes: 10 }, // Notification pour le Team Leader
-      ],
-    },
-  };
-
-  try {
-    const res = await calendar.events.insert({
-      calendarId: 'primary', // Agenda du Team Leader
-      requestBody: event,
-      sendUpdates: 'all', // Déclenche l'envoi immédiat de l'invitation (l'email)
-    });
-    console.log(` Alerte créée dans l'agenda du TL pour le : ${alertDate.toISOString()}`);
-    return res.data.htmlLink;
-  } catch (error) {
-    console.error('Erreur API Google Calendar:', error.message);
-    return null;
-  }
-}*/

@@ -10,27 +10,39 @@ exports.AuthModule = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const passport_1 = require("@nestjs/passport");
+const typeorm_1 = require("@nestjs/typeorm");
+const config_1 = require("@nestjs/config");
 const auth_service_1 = require("./auth.service");
 const jwt_strategy_1 = require("./jwt.strategy");
 const users_module_1 = require("../users/users.module");
 const auth_controller_1 = require("./auth.controller");
-const constants_1 = require("./constants");
+const password_reset_token_entity_1 = require("./entities/password-reset-token.entity");
+const mail_module_1 = require("../mail/mail.module");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
 exports.AuthModule = AuthModule = __decorate([
     (0, common_1.Module)({
         imports: [
+            typeorm_1.TypeOrmModule.forFeature([password_reset_token_entity_1.PasswordResetToken]),
+            config_1.ConfigModule,
             (0, common_1.forwardRef)(() => users_module_1.UsersModule),
             passport_1.PassportModule,
-            jwt_1.JwtModule.register({
-                secret: constants_1.jwtConstants.secret,
-                signOptions: { expiresIn: constants_1.jwtConstants.expiresIn },
+            mail_module_1.MailModule,
+            jwt_1.JwtModule.registerAsync({
+                imports: [config_1.ConfigModule],
+                inject: [config_1.ConfigService],
+                useFactory: async (configService) => ({
+                    secret: configService.get('JWT_SECRET'),
+                    signOptions: {
+                        expiresIn: configService.get('JWT_EXPIRES_IN', '1h')
+                    },
+                }),
             }),
         ],
         providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy],
         controllers: [auth_controller_1.AuthController],
-        exports: [auth_service_1.AuthService]
+        exports: [auth_service_1.AuthService],
     })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map

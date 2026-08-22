@@ -31,28 +31,9 @@ export class ParserService {
   return files;
 }
 
- /* async extractTextFromImage(imagePath: string): Promise<string> {
-    const result = await tesseract.recognize(imagePath, 'eng');
-    return result.data.text;
-  }
-
-  async extractTextFromPdf(pdfPath: string): Promise<string> {
-    const pages = await this.pdfToImages(pdfPath);
-    console.log('Generated pages:', pages);
-    let fullText = '';
-    for (const page of pages) {
-      const text = await this.extractTextFromImage(page);
-      fullText += text + '\n';
-    }
-    console.log(' OCR TEXT:', fullText);
-//  Apply the lightweight cleanup filter here
-    const cleanedText = this.cleanText(fullText);
-    
-    console.log('FINAL OCR TEXT:', cleanedText);
-    return cleanedText;
-  }*/
+ 
 async extractTextFromImage(imagePath: string): Promise<{ text: string; confidence: number }> {
-    const result = await tesseract.recognize(imagePath, 'eng');
+    const result = await tesseract.recognize(imagePath, 'eng+fra');
     return {
       text: result.data.text,
       confidence: result.data.confidence // Récupération de la confiance interne de Tesseract
@@ -141,3 +122,23 @@ public formatDateToISO(dateStr: string | null | undefined): string | null {
     return `${year}-${month}-${day}`;
   }
 }
+/* async extractTextFromImage(imagePath: string): Promise<string> {
+    const result = await tesseract.recognize(imagePath, 'eng');
+    return result.data.text;
+  }
+
+  async extractTextFromPdf(pdfPath: string): Promise<string> {
+    const pages = await this.pdfToImages(pdfPath);
+    console.log('Generated pages:', pages);
+    let fullText = '';
+    for (const page of pages) {
+      const text = await this.extractTextFromImage(page);
+      fullText += text + '\n';
+    }
+    console.log(' OCR TEXT:', fullText);
+//  Apply the lightweight cleanup filter here
+    const cleanedText = this.cleanText(fullText);
+    
+    console.log('FINAL OCR TEXT:', cleanedText);
+    return cleanedText;
+  }*/

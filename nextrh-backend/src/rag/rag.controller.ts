@@ -2,6 +2,8 @@ import { Controller, Get, Post, Body, Query } from '@nestjs/common';
 import { IndexingService } from './indexing/indexing.service';
 import { RagOrchestratorService } from './application/rag-orchestrator.service';
 import { EvaluationService } from './evaluation/evaluation.service';
+import { EvaluationReport } from './types/evaluation.types';
+
 @Controller('rag')
 export class RagController {
  constructor(
@@ -23,7 +25,7 @@ export class RagController {
     return this.indexingService.indexAllCVs();
   }
   @Post('evaluate')
-  async evaluate() {
+  async evaluate(): Promise<EvaluationReport> {
     return this.evaluationService.runEvaluationSuite();
   }
 

@@ -5,8 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { APP_GUARD } from '@nestjs/core';
-import { RolesGuard } from './auth/roles.guard';
-import { JwtAuthGuard } from './auth/jwt-auth.guard';
+
 import { CertificationsModule } from './certifications/certifications.module';
 import { TrainingModule } from './training/training.module';
 import { ProjectModule } from './project/project.module';
@@ -15,7 +14,7 @@ import { EmployeesModule } from './Employee/EmployeesModule';
 
 import { CvModule } from './cvs/cv.module';
 import { ParserModule } from './parser/parser.module';
-import { CvParsingModule } from './cv-parsing/cv-parsing.module';
+
 import { ExperienceModule } from './experience/experience.module';
 import { RagModule } from './rag/rag.module';
 import { GoogleCalendarService } from './google-calendar/google-calendar.service';
@@ -23,13 +22,21 @@ import { GoogleCalendarController } from './google-calendar/google-calendar.cont
 import { GoogleCalendarModule } from './google-calendar/google-calendar.module';
 import { CvGeneratorModule } from './cv-generator/cv-generator.module';
 
-import { CvGenerateModule } from './cv-generate/cv-generate.module';
-import { DocumentModule } from './document-manager/document.module';
+
 import { ScoringModule } from './scoring/scoring.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { CvParserModule } from './cv-parser/cv-parser.module';
+import { MailModule } from './mail/mail.module';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { LlmModule } from './llm/llm.module';
 @Module({
  imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true , 
+       envFilePath: '.env',}),
+      ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 10,
+    }]),
    TypeOrmModule.forRootAsync({
   imports: [ConfigModule],
   inject: [ConfigService],
@@ -57,20 +64,26 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     
     CvModule,
     ParserModule,
-    CvParsingModule,
+
     ExperienceModule,
     RagModule,
     GoogleCalendarModule,
     CvGeneratorModule,
-    CvGenerateModule,
-    DocumentModule,
+    
+    
     ScoringModule,
+    CvParserModule,
+    MailModule,
+    LlmModule,
 
     
     
   ],
  controllers: [ GoogleCalendarController],
- providers: [ GoogleCalendarService],
+ providers: [ GoogleCalendarService ,{
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },],
 
 })
 export class AppModule {}

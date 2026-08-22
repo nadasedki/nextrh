@@ -17,21 +17,22 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("typeorm");
 const user_entity_1 = require("./entities/user.entity");
 const role_entity_1 = require("./entities/role.entity");
-const team_entity_1 = require("./entities/team.entity");
+const team_entity_1 = require("../teams/entities/team.entity");
 const typeorm_2 = require("@nestjs/typeorm");
 const experience_entity_1 = require("../experience/entities/experience.entity");
 let UsersService = class UsersService {
-    constructor(userRepo, roleRepo, teamRepo, experienceRepo) {
+    constructor(userRepo, roleRepo, teamRepo, experienceRepo, dataSource) {
         this.userRepo = userRepo;
         this.roleRepo = roleRepo;
         this.teamRepo = teamRepo;
         this.experienceRepo = experienceRepo;
+        this.dataSource = dataSource;
     }
     async create(dto) {
         const role = await this.roleRepo.findOne({ where: { role_id: dto.role_id } });
         const user = this.userRepo.create({
             email: dto.email,
-            password_hash: dto.password_hash,
+            password_hash: dto.password,
             full_name: dto.full_name,
             role,
         });
@@ -75,8 +76,7 @@ let UsersService = class UsersService {
         const user = await this.userRepo.findOne({ where: { user_id } });
         if (!user)
             return null;
-        user.active = false;
-        return this.userRepo.save(user);
+        return this.userRepo.remove(user);
     }
     async findTeamMembers(team_leader_id) {
         const team = await this.teamRepo.findOne({ where: { team_leader_id } });
@@ -118,6 +118,18 @@ let UsersService = class UsersService {
         });
         return years;
     }
+    async getGlobalAdminStats() {
+        const totalUsers = await this.userRepo.count({ where: { active: true } });
+        const teamCountResult = await this.dataSource.query('SELECT COUNT(*) as count FROM teams');
+        const totalTeams = parseInt(teamCountResult[0]?.count || '0', 10);
+        const certCountResult = await this.dataSource.query('SELECT COUNT(*) as count FROM certifications');
+        const totalCerts = parseInt(certCountResult[0]?.count || '0', 10);
+        return {
+            totalUsers,
+            totalTeams,
+            totalCerts,
+        };
+    }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
@@ -129,6 +141,7 @@ exports.UsersService = UsersService = __decorate([
     __metadata("design:paramtypes", [typeorm_1.Repository,
         typeorm_1.Repository,
         typeorm_1.Repository,
-        typeorm_1.Repository])
+        typeorm_1.Repository,
+        typeorm_1.DataSource])
 ], UsersService);
 //# sourceMappingURL=users.service.js.map
