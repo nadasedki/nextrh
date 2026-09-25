@@ -23,7 +23,6 @@ export interface ParsedCvResponse {
             period: string | null;
             company: string;
             role: string;
-            lowConfidence: boolean;
         }>;
         certifications: Array<{
             certName: string;
@@ -31,19 +30,16 @@ export interface ParsedCvResponse {
             date: string | null;
             issue_date: string | null;
             expiry_date: null;
-            lowConfidence: boolean;
         }>;
         education: Array<{
             year: string | null;
             institution: string;
             degree: string;
-            lowConfidence: boolean;
         }>;
         projects: Array<{
             year: string | null;
             client: string;
             description: string;
-            lowConfidence: boolean;
         }>;
     };
 }

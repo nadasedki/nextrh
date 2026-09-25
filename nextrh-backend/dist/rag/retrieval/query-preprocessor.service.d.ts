@@ -1,9 +1,5 @@
-import { OnModuleInit } from '@nestjs/common';
-export declare class QueryPreprocessorService implements OnModuleInit {
+export declare class QueryPreprocessorService {
     private readonly logger;
-    private stopWords;
-    private readonly STOP_WORDS_PATH;
-    onModuleInit(): void;
     preprocess(question: string): {
         cleaned: string;
         expandedTerms: string[];

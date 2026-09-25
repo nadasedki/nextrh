@@ -1,5 +1,3 @@
-// src/rag/vector/vector.service.ts
-
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { QdrantClient } from '@qdrant/js-client-rest';
@@ -9,14 +7,13 @@ export interface VectorPoint {
   vector: number[];
   payload: {
     text: string;
-    type: string;          // e.g., 'experience', 'project', 'certification', 'profile', 'skills'
+    type: string;          
     user_id: number;
     entity_id: number;
     full_name: string;
     source_table: string;
     indexed_at: string; 
-    generation :number ;   // ISO Date string tracking mapping generation timestamps
-  };
+    generation: number;     };
 }
 
 @Injectable()
@@ -24,17 +21,23 @@ export class VectorService implements OnModuleInit {
   private readonly logger = new Logger(VectorService.name);
   private readonly client: QdrantClient;
   private readonly collection: string;
-  private readonly VECTOR_SIZE = 1024; //768//// Matches nomic-embed-text/Ollama dimensions
-
+  private readonly vectorSize: number; 
   constructor(private readonly configService: ConfigService) {
+    const qdrantUrl = this.configService.get<string>('QDRANT_URL');
     const host = this.configService.get<string>('QDRANT_HOST', '127.0.0.1');
     const port = this.configService.get<number>('QDRANT_PORT', 6333);
-    this.collection = this.configService.get<string>('QDRANT_COLLECTION', 'user_profiles');
 
-    this.client = new QdrantClient({ host, port });
+    this.collection = this.configService.get<string>('QDRANT_COLLECTION', 'user_profiles');
+    // 1024 matches Ollama bge-m3 dimension
+    this.vectorSize = this.configService.get<number>('QDRANT_VECTOR_SIZE', 1024);
+
+    // Initialize client supporting both full URL or host/port
+    this.client = qdrantUrl 
+      ? new QdrantClient({ url: qdrantUrl })
+      : new QdrantClient({ host, port });
 
     this.logger.log(
-      `Qdrant client initialized on ${host}:${port} targeting collection "${this.collection}"`
+      `Qdrant client initialized targeting collection "${this.collection}" (Vector Size: ${this.vectorSize})`
     );
   }
 
@@ -60,12 +63,13 @@ export class VectorService implements OnModuleInit {
   /**
    * Queries vector space embeddings for nearest neighbor extraction
    */
-  async search(vector: number[], topK = 10) {
+  async search(vector: number[], topK = 10, filter?: any) {
     try {
       return await this.client.search(this.collection, {
         vector: vector,
         limit: Math.max(1, Math.floor(Number(topK))),
         with_payload: true,
+        filter: filter || undefined, 
       });
     } catch (err: any) {
       this.logger.error(`Vector search failed: ${err.message}`);
@@ -122,7 +126,7 @@ export class VectorService implements OnModuleInit {
   }
 
   /**
-   * Recreates the collection schema from scratch (destructive reset)
+   * Recreates the collection schema from scratch with Cosine similarity
    */
   async recreateCollection() {
     try {
@@ -131,17 +135,17 @@ export class VectorService implements OnModuleInit {
 
       if (exists) {
         await this.client.deleteCollection(this.collection);
-        this.logger.log(`Dropped old collection trace: "${this.collection}"`);
+        this.logger.log(`Dropped old collection: "${this.collection}"`);
       }
 
       await this.client.createCollection(this.collection, {
         vectors: {
-          size: this.VECTOR_SIZE,
+          size: this.vectorSize,
           distance: 'Cosine',
         },
       });
 
-      this.logger.log(`Successfully deployed collection "${this.collection}" (Size: ${this.VECTOR_SIZE}, Metric: Cosine)`);
+      this.logger.log(`Successfully deployed collection "${this.collection}" (Size: ${this.vectorSize}, Metric: Cosine)`);
     } catch (err: any) {
       this.logger.error(`Failed to recreate collection "${this.collection}": ${err.message}`);
       throw err;

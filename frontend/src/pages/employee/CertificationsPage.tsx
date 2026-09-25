@@ -16,6 +16,7 @@ import {
 import { Award, Plus, Upload, Grid, List, Search, Calendar, Building2, Loader2, FileText, Trash2, Pencil, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 
+
 interface Certification {
   id: number;
   userId: number;
@@ -145,15 +146,17 @@ const CertificationsPage: React.FC = () => {
   };
 
   // Step 1: Upload to Backend to GET parsed preview data
+
+// Step 1: Upload to Backend and keep isUploading = true until BullMQ finishes
   const handleUploadFile = async () => {
     if (!selectedFile) return;
 
-    setIsUploading(true);
+    setIsUploading(true); // 👈 1. Turn ON loading spinner
     const data = new FormData();
     data.append('file', selectedFile);
 
     try {
-      // NOTE: Point this to your backend parser routing endpoint
+      // 1. Send file to BullMQ queue
       const res = await fetch(`http://localhost:3000/certifications/parse-preview`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
@@ -161,27 +164,54 @@ const CertificationsPage: React.FC = () => {
       });
 
       const result = await res.json();
-      if (!res.ok) throw new Error(result.message || 'Failed to parse certificate');
+      if (!res.ok) throw new Error(result.message || 'Failed to upload certificate');
 
-      const certData = result.data;
+      const jobId = result.jobId;
 
-      // Set preview state to reveal the data verification block
-      setParsedPreview({
-        certName: certData.certName || 'Unknown Title',
-        provider: certData.provider || 'Unknown Provider',
-        issueDate: certData.issueDate || '',
-        expiryDate: certData.expiryDate || '',
-        holderName: certData.holderName || '', // Extracted holder name from engine
-        filePath: certData.filePath || '',
-      });
+      // 2. Poll GET /certifications/status/:jobId every 1.5 seconds
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusRes = await fetch(`http://localhost:3000/certifications/status/${jobId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (!statusRes.ok) return;
+
+          const jobStatus = await statusRes.json();
+
+          // When AI finishes successfully
+          if (jobStatus.state === 'completed' && jobStatus.result) {
+            clearInterval(pollInterval);
+            const certData = jobStatus.result;
+
+            setParsedPreview({
+              certName: certData.certName || 'Unknown Title',
+              provider: certData.provider || 'Unknown Provider',
+              issueDate: certData.issueDate || '',
+              expiryDate: certData.expiryDate || '',
+              holderName: certData.holderName || '',
+              filePath: certData.filePath || '',
+            });
+
+            setIsUploading(false); // 👈 2. Turn OFF loading ONLY when completed!
+          } 
+          // If AI fails
+          else if (jobStatus.state === 'failed') {
+            clearInterval(pollInterval);
+            setIsUploading(false); // 👈 3. Turn OFF loading on failure
+            alert(`Parsing Error: ${jobStatus.failedReason || 'AI extraction failed'}`);
+          }
+        } catch (pollErr) {
+          console.warn('Polling error:', pollErr);
+        }
+      }, 1500);
 
     } catch (err: any) {
-      console.error('Error parsing file:', err);
+      console.error('Error starting parsing job:', err);
       alert(`Parsing Error: ${err.message}`);
-    } finally {
-      setIsUploading(false);
+      setIsUploading(false); // 👈 4. Turn OFF loading if upload request fails
     }
-  };
+     };
 
   // Step 2: Confirm workflow to save verified data to DB
   const handleConfirmSave = async () => {
@@ -315,8 +345,8 @@ const CertificationsPage: React.FC = () => {
 
   // Check if extracted certificate name matches current user's profile name
   const isHolderValid = () => {
-    if (!parsedPreview?.holderName || !user?.full_name) return true;
-    return parsedPreview.holderName.trim().toLowerCase() === user.full_name.trim().toLowerCase();
+    if (!parsedPreview?.holderName || !user?.name) return true;
+    return parsedPreview.holderName.trim().toLowerCase() === user.name.trim().toLowerCase();
   };
 
   const CertificationCard: React.FC<{ cert: Certification }> = ({ cert }) => (
@@ -416,40 +446,57 @@ const CertificationsPage: React.FC = () => {
   {/* --- 1. UPLOAD ZONE (Only visible when NOT editing) --- */}
   {!editingCertId && (
     <div className="space-y-4 py-2">
-      <div
-        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
-          selectedFile ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
+    <div
+        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+          isUploading
+            ? 'border-primary/50 bg-primary/5 cursor-wait'
+            : selectedFile
+              ? 'border-primary bg-primary/5 cursor-pointer'
+              : 'border-muted-foreground/25 hover:border-primary/50 cursor-pointer'
         }`}
-        onClick={() => document.getElementById('fileInput')?.click()}
+        onClick={() => !isUploading && document.getElementById('fileInput')?.click()}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
-          if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          if (!isUploading && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             setSelectedFile(e.dataTransfer.files[0]);
             setParsedPreview(null);
           }
         }}
       >
-        {selectedFile ? (
-          /* CLEANED UP: No extra button inside here anymore */
+        {/* 1. STATE:  processing in the background */}
+        {isUploading ? (
+          <div className="space-y-2 py-3 text-center">
+            <Loader2 className="h-8 w-8 mx-auto animate-spin text-primary" />
+            <p className="text-sm font-semibold text-primary">Analyzing document...</p>
+            <p className="text-xs text-muted-foreground">Extracting certificate details & verifying identity</p>
+          </div>
+        ) : selectedFile ? (
+          /* 2. STATE: File chosen, waiting for user to click button */
           <div className="space-y-2 py-2">
             <FileText className="h-8 w-8 mx-auto text-primary" />
             <p className="text-sm font-medium text-primary truncate max-w-xs mx-auto">{selectedFile.name}</p>
-            <p className="text-xs text-muted-foreground">Ready to process. Click the button below.</p>
+            <p className="text-xs text-muted-foreground">Ready to process. Click "Process Document" below.</p>
           </div>
         ) : (
+          /* 3. STATE: No file selected yet */
           <>
             <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
             <p className="text-sm font-medium">Click to upload or drag and drop</p>
             <p className="text-xs text-muted-foreground mt-1">PDF, PNG, or JPG (max. 5MB)</p>
           </>
         )}
+
         <input
           type="file"
           id="fileInput"
           accept=".pdf,.png,.jpg,.jpeg"
           className="hidden"
-          onChange={(e) => { setSelectedFile(e.target.files?.[0] || null); setParsedPreview(null); }}
+          disabled={isUploading}
+          onChange={(e) => { 
+            setSelectedFile(e.target.files?.[0] || null); 
+            setParsedPreview(null); 
+          }}
         />
       </div>
 
@@ -472,7 +519,7 @@ const CertificationsPage: React.FC = () => {
           {!isHolderValid() && (
             <div className="text-xs bg-amber-50 border border-amber-200 text-amber-800 p-2.5 rounded-md space-y-1">
               <p className="font-semibold">Verification Alert:</p>
-              <p>This certificate belongs to <b>"{parsedPreview.holderName}"</b>, but your profile name is <b>"{user?.full_name}"</b>.</p>
+              <p>This certificate belongs to <b>"{parsedPreview.holderName}"</b>, but your profile name is <b>"{user?.name}"</b>.</p>
             </div>
           )}
 

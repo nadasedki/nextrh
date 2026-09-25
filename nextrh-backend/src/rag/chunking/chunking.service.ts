@@ -24,24 +24,17 @@ export interface CandidateProfile {
 @Injectable()
 export class ChunkingService {
 
-  /**
-   * Formats a raw Date or string value to a clean, readable calendar year [1]
-   */
-  private formatDate(date?: Date | string | null): string {
+ private formatDate(date?: Date | string | null): string {
     if (!date) return 'N/A';
     const d = new Date(date);
     return isNaN(d.getTime()) ? String(date) : d.getFullYear().toString();
   }
 
-  /**
-   * CHUNK 1 (Static): Competencies & Core Background
-   * Combines candidate metadata, core skills, academic history, and career experiences [1].
-   */
   chunkStaticProfile(profile: CandidateProfile): TextChunk[] {
     const { full_name, profession, email, address, skills, educations, experiences } = profile;
     const lines: string[] = [];
 
-    // Semantic Identity Statement (gives the model clear subject context) [2]
+    // Semantic Identity Statement (gives the model clear subject context)
     lines.push(`${full_name} est un professionnel spécialisé en tant que ${profession || 'spécialiste IT'}.`);
 
     if (email) lines.push(`Contact email: ${email}.`);
@@ -79,7 +72,7 @@ export class ChunkingService {
   }
 
   /**
-   * CHUNK 2 (Dynamic): The Unified Project Portfolio [1]
+   * CHUNK 2 (Dynamic): The Unified Project Portfolio 
    */
   chunkAllProjects(profile: CandidateProfile): TextChunk[] {
     const { full_name, profession, projects } = profile;
@@ -106,7 +99,7 @@ export class ChunkingService {
   }
 
   /**
-   * CHUNK 3 (Dynamic): The Professional Credentials (Certifications & Trainings) [1]
+   * CHUNK 3 (Dynamic): The Professional Credentials (Certifications & Trainings) 
    */
   chunkAllCredentials(profile: CandidateProfile): TextChunk[] {
     const { full_name, profession, certifications, trainings } = profile;
@@ -142,7 +135,7 @@ export class ChunkingService {
   }
 
   /**
-   * Generates all 3 semantic vectors in a single execution pipeline [1]
+   * Generates all 3 semantic vectors in a single execution pipeline 
    */
   chunkCandidate(profile: CandidateProfile): TextChunk[] {
     return [

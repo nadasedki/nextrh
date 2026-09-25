@@ -8,7 +8,7 @@ import { RegisterDto } from '../auth/dto/register.dto';
 @Controller('users')
 export class UsersController {constructor(private readonly usersService: UsersService) {}
 
-  // List all users (Bid Manager only)
+  
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('BID_MANAGER', 'ADMIN')
   @Get()
@@ -22,7 +22,6 @@ export class UsersController {constructor(private readonly usersService: UsersSe
    const team_leader_id = req.user.sub;
    return this.usersService.findTeamMembers(team_leader_id);
 }
-  // Get user by ID (Bid Manager or Team Leader of the same team)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('TEAM_LEADER', 'BID_MANAGER', 'ADMIN')
   @Get(':id')
@@ -30,7 +29,6 @@ export class UsersController {constructor(private readonly usersService: UsersSe
     return this.usersService.findOneById(id);
   }
 
-  // Create new user (BID_MANAGER only)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('BID_MANAGER')
   @Post()
@@ -38,7 +36,6 @@ export class UsersController {constructor(private readonly usersService: UsersSe
     return this.usersService.create(dto);
   }
 
-  // Update user
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('TEAM_LEADER', 'BID_MANAGER', 'ADMIN')
   @Patch(':id')
@@ -46,7 +43,6 @@ export class UsersController {constructor(private readonly usersService: UsersSe
     return this.usersService.update(id, dto);
   }
 
-  // Delete user (soft delete or deactivate)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('BID_MANAGER', 'ADMIN')
   @Delete(':id')

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import {
@@ -25,13 +25,20 @@ import {
   X, 
   Layers, 
   Eye, 
-  Plus 
+  Plus,
+  Sparkles,
+  Trash2,
+  Search,      
+  ChevronsUpDown,
+  UserCheck,
+  ArrowRight
 } from 'lucide-react';
 
 interface SavedTemplate {
   id: string;
   name: string;
   created_at: string;
+  template_html?: string;
 }
 
 const CVGenerationPage: React.FC = () => {
@@ -55,33 +62,60 @@ const CVGenerationPage: React.FC = () => {
   // Preview Modal States
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState<string>('');
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
-  // Load active employees and saved templates on mount
+  // Searchable Employee Dropdown States
+  const [employeeSearch, setEmployeeSearch] = useState('');
+  const [isEmployeeDropdownOpen, setIsEmployeeDropdownOpen] = useState(false);
+  const employeeDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Auto-close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (employeeDropdownRef.current && !employeeDropdownRef.current.contains(event.target as Node)) {
+        setIsEmployeeDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter employees
+  const filteredEmployees = employees.filter(emp => {
+    const query = employeeSearch.toLowerCase().trim();
+    if (!query) return true;
+    const nameMatch = emp.name.toLowerCase().includes(query);
+    const titleMatch = emp.title?.toLowerCase().includes(query);
+    return nameMatch || titleMatch;
+  });
+
+  const currentEmployee = employees.find(e => e.id === selectedEmployee);
+  const currentTemplate = templates.find(t => t.id === selectedTemplateId);
+
+  // Load initial data
   useEffect(() => {
     if (!token) return;
 
     const fetchInitialData = async () => {
       setIsFetchLoading(true);
       try {
-        // 1. Fetch Real Employees list from backend
         const empResponse = await fetch('http://localhost:3000/employees', {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (empResponse.ok) {
           const empData = await empResponse.json();
+          //  FIXED: Prioritize real account full_name
           setEmployees(empData.map((e: any) => ({
             id: String(e.user_id),
-            name: e.cv_full_name || e.full_name,
-            title: e.cv_profession || 'Collaborateur'
+            name: e.full_name || e.cv_full_name || 'Unnamed Employee',
+            title: e.title || e.cv_profession || 'Employee'
           })));
         }
 
-        // 2. Fetch Saved Templates list from database [2]
         await fetchTemplatesList();
-
       } catch (error) {
-        toast.error("Erreur lors de la récupération des données initiales.");
+        toast.error("Failed to load initial data.");
       } finally {
         setIsFetchLoading(false);
       }
@@ -100,7 +134,7 @@ const CVGenerationPage: React.FC = () => {
         setTemplates(templatesData);
       }
     } catch (error) {
-      toast.error("Impossible de charger la liste des modèles enregistrés.");
+      toast.error("Unable to load saved templates.");
     }
   };
 
@@ -114,9 +148,9 @@ const CVGenerationPage: React.FC = () => {
     }
   };
 
-  // ===================================================
-  // STAGE 1 (CALL 1): INGEST NEW PDF VISUAL BLUEPRINT
-  // ===================================================
+  // =========================================================================
+  // STAGE 1: INGEST TEMPLATE VIA BULLMQ ASYNC POLLING
+  // =========================================================================
   const handleIngestTemplate = async () => {
     if (!selectedFile || !newTemplateName || !token) return;
 
@@ -124,40 +158,65 @@ const CVGenerationPage: React.FC = () => {
     const formData = new FormData();
     formData.append('file', selectedFile);
     formData.append('name', newTemplateName);
-    formData.append('userId', selectedEmployee || '1'); // Target user reference
 
     try {
+      // 1. Submit template upload job to BullMQ queue
       const response = await fetch('http://localhost:3000/cv/templates/upload', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 
-      if (!response.ok) throw new Error("Échec de l'analyse du modèle.");
-
       const data = await response.json();
-      toast.success("Modèle visuel analysé et squelette enregistré !");
-      
-      // Refresh templates and automatically select the newly generated template
-      await fetchTemplatesList();
-      setSelectedTemplateId(data.templateId);
-      
-      // Reset upload inputs
-      setSelectedFile(null);
-      setNewTemplateName('');
+      if (!response.ok) throw new Error(data.message || "Failed to start template ingestion.");
+
+      const jobId = data.jobId;
+      toast.info("Analyzing template layout in the background...");
+
+      // 2. Poll BullMQ job status every 1.5s
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusRes = await fetch(`http://localhost:3000/cv/templates/status/${jobId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (!statusRes.ok) return;
+          const jobStatus = await statusRes.json();
+
+          if (jobStatus.state === 'completed') {
+            clearInterval(pollInterval);
+            setIsIngesting(false);
+            toast.success("Template blueprint extracted and saved!");
+            
+            // Refresh gallery and auto-select new template
+            await fetchTemplatesList();
+            if (jobStatus.result?.templateId) {
+              setSelectedTemplateId(jobStatus.result.templateId);
+            }
+            setSelectedFile(null);
+            setNewTemplateName('');
+          } else if (jobStatus.state === 'failed') {
+            clearInterval(pollInterval);
+            setIsIngesting(false);
+            toast.error(`Ingestion failed: ${jobStatus.failedReason || 'Unknown error'}`);
+          }
+        } catch (pollErr) {
+          console.warn('Polling error:', pollErr);
+        }
+      }, 1500);
+
     } catch (error: any) {
-      toast.error(error.message || "Erreur lors du traitement IA du modèle.");
-    } finally {
+      toast.error(error.message || "An error occurred while uploading template.");
       setIsIngesting(false);
     }
   };
 
-  // ===================================================
-  // STAGE 2 (CALL 2): SEMANTIC CV COMPILATION
-  // ===================================================
+  // =========================================================================
+  // STAGE 2: GENERATE CV VIA BULLMQ ASYNC POLLING
+  // =========================================================================
   const handleGenerateCV = async () => {
     if (!selectedEmployee || !selectedTemplateId || !token) {
-      toast.error("Veuillez sélectionner un collaborateur et un modèle.");
+      toast.error("Please select both a template and an employee.");
       return;
     }
 
@@ -165,6 +224,7 @@ const CVGenerationPage: React.FC = () => {
     setDownloadUrl(null);
 
     try {
+      // 1. Enqueue generation job in BullMQ
       const response = await fetch('http://localhost:3000/cv/generate', {
         method: 'POST',
         headers: {
@@ -173,46 +233,96 @@ const CVGenerationPage: React.FC = () => {
         },
         body: JSON.stringify({
           templateId: selectedTemplateId,
-          userId: selectedEmployee
+          userId: Number(selectedEmployee)
         }),
       });
 
-      if (!response.ok) throw new Error('Erreur lors de la compilation du CV.');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to initiate CV generation.");
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      setDownloadUrl(url);
-      toast.success("Le CV a été compilé avec succès !");
+      const jobId = data.jobId;
+      toast.info("Compiling tailored CV document...");
+
+      // 2. Poll BullMQ generation status
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusRes = await fetch(`http://localhost:3000/cv/generate/status/${jobId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (!statusRes.ok) return;
+          const jobStatus = await statusRes.json();
+
+          if (jobStatus.state === 'completed' && jobStatus.result) {
+            clearInterval(pollInterval);
+            setIsGenerating(false);
+            setDownloadUrl(jobStatus.result.downloadUrl);
+            toast.success("CV compiled successfully!");
+          } else if (jobStatus.state === 'failed') {
+            clearInterval(pollInterval);
+            setIsGenerating(false);
+            toast.error(`Generation failed: ${jobStatus.failedReason || 'Unknown error'}`);
+          }
+        } catch (pollErr) {
+          console.warn('Polling error:', pollErr);
+        }
+      }, 1500);
 
     } catch (error: any) {
-      toast.error(error.message || "Une erreur est survenue lors de la compilation.");
-    } finally {
+      toast.error(error.message || "An error occurred while generating the CV.");
       setIsGenerating(false);
     }
   };
 
-  // ==========================================
-  // LIVE HTML SKELETON PREVIEW MODAL [1.1.2]
-  // ==========================================
-  const handlePreviewTemplate = async (templateId: string) => {
+  // DELETE TEMPLATE
+  const handleDeleteTemplate = async (templateId: string, templateName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    const confirmDelete = window.confirm(`Are you sure you want to delete "${templateName}"?`);
+    if (!confirmDelete) return;
+
+    try {
+      const response = await fetch(`http://localhost:3000/cv/templates/${templateId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to delete template.');
+      }
+
+      toast.success(`Template "${templateName}" deleted successfully!`);
+
+      if (selectedTemplateId === templateId) {
+        setSelectedTemplateId('');
+      }
+
+      await fetchTemplatesList();
+    } catch (error: any) {
+      toast.error(error.message || 'Error deleting template.');
+    }
+  };
+
+  // PREVIEW MODAL
+  const handlePreviewTemplate = async (templateId: string, templateName?: string) => {
     setIsPreviewLoading(true);
     setPreviewHtml(null);
+    setPreviewTitle(templateName || 'Template Preview');
     setIsPreviewOpen(true);
 
     try {
-      // Pull all templates to find our target HTML code directly [1.1.2]
       const response = await fetch(`http://localhost:3000/cv/templates`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.ok) {
         const rows = await response.json();
         const targetTemplate = rows.find((t: any) => t.id === templateId);
-        
-        // Render raw stored HTML directly inside the iframe srcDoc [1.1.2]
         setPreviewHtml(targetTemplate?.template_html || storedTemplateFallbackHtml);
+        if (targetTemplate?.name) setPreviewTitle(targetTemplate.name);
       }
     } catch (err) {
-      toast.error("Impossible d'afficher l'aperçu.");
+      toast.error("Unable to load template preview.");
     } finally {
       setIsPreviewLoading(false);
     }
@@ -220,239 +330,456 @@ const CVGenerationPage: React.FC = () => {
 
   const storedTemplateFallbackHtml = `
     <div style="font-family: Arial; padding: 40px; text-align: center; color: #475569;">
-      <h3>Aperçu Indisponible</h3>
-      <p style="font-size: 10pt;">La structure HTML de ce squelette n'a pas pu être chargée.</p>
+      <h3>Preview Unavailable</h3>
+      <p style="font-size: 10pt;">The HTML layout structure could not be rendered.</p>
     </div>
   `;
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto animate-fade-in">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold">Générateur de CV Intelligent</h1>
-        <p className="text-muted-foreground">Associez un profil de collaborateur avec n'importe quel modèle PDF à la volée</p>
+    <div className="space-y-3 max-w-7xl mx-auto h-[calc(100vh-130px)] flex flex-col overflow-hidden animate-fade-in px-2 sm:px-4">
+      
+      {/* Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0 pb-2 border-b border-border/70">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <FileOutput className="h-5 w-5 text-primary" />
+            Dynamic CV Studio
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            Compile tailored proposal resumes using custom templates
+          </p>
+        </div>
+
+        {/* Selected Summary Pill */}
+        {(currentTemplate || currentEmployee) && (
+          <div className="flex items-center gap-2 text-xs bg-muted/50 px-2.5 py-1 rounded-md border w-fit">
+            <span className="text-muted-foreground font-medium text-[11px]">Ready:</span>
+            {currentTemplate ? (
+              <Badge variant="secondary" className="font-normal text-[10px] gap-1 max-w-[120px] truncate h-5">
+                <Layers className="h-2.5 w-2.5 text-primary" /> {currentTemplate.name}
+              </Badge>
+            ) : (
+              <span className="text-muted-foreground italic text-[10px]">No template</span>
+            )}
+            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground" />
+            {currentEmployee ? (
+              <Badge variant="secondary" className="font-normal text-[10px] gap-1 max-w-[120px] truncate h-5">
+                <UserCheck className="h-2.5 w-2.5 text-primary" /> {currentEmployee.name}
+              </Badge>
+            ) : (
+              <span className="text-muted-foreground italic text-[10px]">No candidate</span>
+            )}
+          </div>
+        )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3 items-start">
-        {/* Left Column: Template selection / upload */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="shadow-sm border-muted">
-            <CardHeader className="bg-muted/20 border-b pb-4">
-              <CardTitle className="text-md flex items-center gap-2">
-                <Layers className="h-5 w-5 text-primary" />
-                1. Sélectionner le modèle visuel
+      {/* Main 2-Column Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 flex-1 min-h-0 overflow-hidden">
+        
+        {/* LEFT COLUMN: Template Gallery */}
+        <Card className="lg:col-span-7 xl:col-span-8 flex flex-col h-full overflow-hidden shadow-sm border-border bg-card">
+          <CardHeader className="bg-muted/20 border-b py-2.5 px-4 shrink-0">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <span className="flex h-5 w-5 rounded-full bg-primary text-primary-foreground text-[10px] items-center justify-center font-bold">
+                  1
+                </span>
+                Choose Template
               </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <Tabs defaultValue="saved">
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="saved">Modèles enregistrés ({templates.length})</TabsTrigger>
-                  <TabsTrigger value="upload">Nouveau modèle PDF</TabsTrigger>
-                </TabsList>
+              <span className="text-xs text-muted-foreground font-medium">
+                {templates.length} templates
+              </span>
+            </div>
+          </CardHeader>
 
-                {/* Tab 1: Saved Templates List */}
-                <TabsContent value="saved" className="space-y-4">
-                  {isFetchLoading ? (
-                    <div className="flex justify-center py-6">
-                      <Loader2 className="animate-spin h-6 w-6 text-primary" />
-                    </div>
-                  ) : templates.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-6">Aucun modèle disponible. Veuillez téléverser un modèle PDF.</p>
-                  ) : (
-                    <div className="grid gap-3">
-                      {templates.map((t) => (
-                        <div 
-                          key={t.id} 
+          <CardContent className="p-3 sm:p-4 flex-1 flex flex-col min-h-0 overflow-hidden">
+            <Tabs defaultValue="saved" className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
+              <TabsList className="grid w-full grid-cols-2 mb-3 h-8.5 shrink-0">
+                <TabsTrigger value="saved" className="text-xs">
+                  Gallery ({templates.length})
+                </TabsTrigger>
+                <TabsTrigger value="upload" className="text-xs">
+                  Upload New Template
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Tab 1: Scrollable Visual Template Gallery */}
+              <TabsContent value="saved" className="flex-1 min-h-0 overflow-y-auto pr-1 m-0 focus-visible:outline-none">
+                {isFetchLoading ? (
+                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2 py-12">
+                    <Loader2 className="animate-spin h-6 w-6 text-primary" />
+                    <p className="text-xs">Loading templates gallery...</p>
+                  </div>
+                ) : templates.length === 0 ? (
+                  <div className="text-center py-12 border-2 border-dashed rounded-xl p-6 bg-muted/10">
+                    <FileText className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                    <p className="text-xs font-semibold text-foreground">No saved templates yet</p>
+                    <p className="text-[11px] text-muted-foreground mt-1 max-w-sm mx-auto">
+                      Upload your first PDF blueprint in the "Upload New Template" tab.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {templates.map((t) => {
+                      const isSelected = selectedTemplateId === t.id;
+                      return (
+                        <div
+                          key={t.id}
                           onClick={() => setSelectedTemplateId(t.id)}
-                          className={`flex items-center justify-between p-4 rounded-lg border transition-all cursor-pointer ${
-                            selectedTemplateId === t.id 
-                              ? 'border-primary bg-primary/5 shadow-sm' 
-                              : 'border-muted hover:border-primary/40'
+                          className={`group relative flex flex-col rounded-xl border-2 transition-all duration-150 cursor-pointer overflow-hidden bg-card hover:shadow-md ${
+                            isSelected
+                              ? 'border-primary ring-2 ring-primary/20 shadow-xs bg-primary/[0.02]'
+                              : 'border-border/70 hover:border-primary/50'
                           }`}
                         >
-                          <div className="flex items-center gap-3">
-                            <FileText className={`h-5 w-5 ${selectedTemplateId === t.id ? 'text-primary' : 'text-muted-foreground'}`} />
-                            <div className="text-left">
-                              <p className="text-sm font-semibold">{t.name}</p>
-                              <p className="text-xs text-muted-foreground">Importé le {new Date(t.created_at).toLocaleDateString()}</p>
+                          {/* Selected Check Badge */}
+                          {isSelected && (
+                            <div className="absolute top-2 right-2 z-20 bg-primary text-primary-foreground p-1 rounded-full shadow-md animate-in zoom-in-75">
+                              <Check className="h-3 w-3 stroke-[3]" />
+                            </div>
+                          )}
+
+                          {/* Miniature Live Scaled Iframe Preview */}
+                          <div className="relative w-full aspect-[1/1.05] bg-white overflow-hidden border-b border-border/60">
+                            <div className="absolute inset-0 overflow-hidden bg-white">
+                              <iframe
+                                title={t.name}
+                                srcDoc={t.template_html}
+                                tabIndex={-1}
+                                className="w-[400%] h-[400%] origin-top-left transform scale-[0.25] pointer-events-none border-0 select-none bg-white"
+                                sandbox="allow-same-origin"
+                              />
+                            </div>
+
+                            {/* Hover Overlay with Quick Preview */}
+                            <div className="absolute inset-0 z-10 bg-black/35 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                className="shadow-md h-7 text-xs font-semibold"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePreviewTemplate(t.id, t.name);
+                                }}
+                              >
+                                <Eye className="h-3 w-3 mr-1 text-primary" />
+                                Full Preview
+                              </Button>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {/* Render visual iframe modal trigger [1.1.2] */}
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handlePreviewTemplate(t.id);
-                              }}
-                              title="Aperçu visuel du squelette"
-                            >
-                              <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                            </Button>
-                            {selectedTemplateId === t.id && (
-                              <div className="bg-primary p-1 rounded-full">
-                                <Check className="h-3 w-3 text-white" />
-                              </div>
-                            )}
+
+                          {/* Card Footer Info */}
+                          <div className="p-2.5 bg-card flex items-center justify-between gap-2 z-10">
+                            <div className="min-w-0 flex-1">
+                              <p className={`text-xs font-semibold truncate ${isSelected ? 'text-primary' : 'text-foreground'}`}>
+                                {t.name}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {new Date(t.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                            
+                            <div className="flex items-center gap-0.5 shrink-0">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePreviewTemplate(t.id, t.name);
+                                }}
+                                title="Fullscreen Preview"
+                              >
+                                <Eye className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                onClick={(e) => handleDeleteTemplate(t.id, t.name, e)}
+                                title="Delete Template"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-
-                {/* Tab 2: Upload New Template */}
-                <TabsContent value="upload" className="space-y-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="templateName">Nom du modèle</Label>
-                    <Input 
-                      id="templateName" 
-                      placeholder="e.g., Annexe 9 - Modèle d'appel d'offres" 
-                      value={newTemplateName}
-                      onChange={(e) => setNewTemplateName(e.target.value)}
-                    />
+                      );
+                    })}
                   </div>
+                )}
+              </TabsContent>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Fichier PDF d'origine</Label>
-                    <div 
-                      className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 ${
-                        selectedFile ? 'border-primary bg-primary/5' : 'border-muted-foreground/20 hover:border-primary/40'
-                      }`}
-                    >
-                      {!selectedFile ? (
-                        <div className="space-y-3">
-                          <Upload className="h-5 w-5 text-muted-foreground mx-auto" />
-                          <p className="text-xs text-muted-foreground">Glissez-déposez ou parcourez votre fichier PDF (Max. 10MB)</p>
-                          <Input 
-                            type="file" 
-                            accept=".pdf" 
-                            className="hidden" 
-                            id="pdf-upload" 
-                            onChange={handleFileChange}
-                          />
-                          <Button variant="outline" size="sm" type="button" onClick={() => document.getElementById('pdf-upload')?.click()}>
-                            Parcourir
-                          </Button>
+              {/* Tab 2: Upload New Template */}
+              <TabsContent value="upload" className="flex-1 min-h-0 overflow-y-auto space-y-3 m-0 pr-1 focus-visible:outline-none">
+                <div className="space-y-1">
+                  <Label htmlFor="templateName" className="text-xs font-medium">
+                    Template Name
+                  </Label>
+                  <Input 
+                    id="templateName" 
+                    placeholder="e.g., Standard RFP Format - Annex 9" 
+                    value={newTemplateName}
+                    onChange={(e) => setNewTemplateName(e.target.value)}
+                    className="h-8.5 text-xs"
+                    disabled={isIngesting}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-medium">Source PDF Blueprint</Label>
+                  <div 
+                    className={`border-2 border-dashed rounded-xl p-5 text-center transition-all duration-150 ${
+                      selectedFile ? 'border-primary bg-primary/5' : 'border-border/80 hover:border-primary/40 bg-muted/10'
+                    }`}
+                  >
+                    {!selectedFile ? (
+                      <div className="space-y-2">
+                        <div className="flex h-8 w-8 mx-auto items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <Upload className="h-4 w-4" />
                         </div>
-                      ) : (
-                        <div className="flex items-center justify-between bg-background p-3 rounded-lg border shadow-sm">
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-6 w-6 text-primary" />
-                            <div className="text-left">
-                              <p className="text-xs font-semibold truncate max-w-[150px]">{selectedFile.name}</p>
-                              <p className="text-[10px] text-muted-foreground">{(selectedFile.size / 1024).toFixed(1)} KB</p>
-                            </div>
+                        <div>
+                          <p className="text-xs font-medium text-foreground">
+                            Drag & drop your PDF template here, or browse
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            Max 10MB PDF file
+                          </p>
+                        </div>
+                        <Input 
+                          type="file" 
+                          accept=".pdf" 
+                          className="hidden" 
+                          id="pdf-upload" 
+                          onChange={handleFileChange}
+                          disabled={isIngesting}
+                        />
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          type="button" 
+                          onClick={() => document.getElementById('pdf-upload')?.click()}
+                          className="text-xs h-7 mt-0.5"
+                          disabled={isIngesting}
+                        >
+                          Browse File
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between bg-background p-2.5 rounded-lg border shadow-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="h-5 w-5 text-primary shrink-0" />
+                          <div className="text-left min-w-0">
+                            <p className="text-xs font-semibold truncate max-w-[180px]">{selectedFile.name}</p>
+                            <p className="text-[10px] text-muted-foreground">{(selectedFile.size / 1024).toFixed(1)} KB</p>
                           </div>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSelectedFile(null)}>
-                            <X className="h-3 w-3" />
-                          </Button>
                         </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 shrink-0" 
+                          onClick={() => setSelectedFile(null)}
+                          disabled={isIngesting}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={handleIngestTemplate} 
+                  disabled={!selectedFile || !newTemplateName || isIngesting}
+                  className="w-full h-9 text-xs font-semibold"
+                >
+                  {isIngesting ? (
+                    <><Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />Analyzing & Saving Layout...</>
+                  ) : (
+                    <><Sparkles className="h-3.5 w-3.5 mr-2" />Extract & Save Template</>
+                  )}
+                </Button>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+
+        {/* RIGHT COLUMN: Candidate Selection & Generation */}
+        <Card className="lg:col-span-5 xl:col-span-4 flex flex-col h-full overflow-hidden shadow-sm border-border bg-card">
+          <CardHeader className="bg-muted/20 border-b py-2.5 px-4 shrink-0">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <span className="flex h-5 w-5 rounded-full bg-primary text-primary-foreground text-[10px] items-center justify-center font-bold">
+                2
+              </span>
+              Generate Document
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Assign candidate and compile customized CV
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="p-3 sm:p-4 flex-1 flex flex-col justify-between overflow-y-auto space-y-4">
+            
+            <div className="space-y-4">
+              {/* Searchable Candidate Selector */}
+              <div className="space-y-1.5 relative" ref={employeeDropdownRef}>
+                <Label className="text-xs font-semibold text-foreground">
+                  Select Candidate
+                </Label>
+
+                <button
+                  type="button"
+                  onClick={() => setIsEmployeeDropdownOpen(prev => !prev)}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-lg border bg-background transition-all text-left shadow-xs focus:ring-1 focus:ring-primary focus:outline-none ${
+                    isEmployeeDropdownOpen ? 'border-primary ring-1 ring-primary/30' : 'border-border hover:bg-muted/40'
+                  }`}
+                >
+                  {currentEmployee ? (
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[9px] shrink-0">
+                        {currentEmployee.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold truncate text-foreground">{currentEmployee.name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{currentEmployee.title}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Choose a team member...</span>
+                  )}
+                  <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground shrink-0 ml-2 opacity-60" />
+                </button>
+
+                {/* Dropdown Popup */}
+                {isEmployeeDropdownOpen && (
+                  <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border border-border rounded-xl shadow-xl overflow-hidden animate-in fade-in-0 zoom-in-95">
+                    <div className="p-2 border-b bg-muted/20 relative">
+                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        placeholder="Search by name or title..."
+                        value={employeeSearch}
+                        onChange={(e) => setEmployeeSearch(e.target.value)}
+                        className="pl-8 h-7.5 text-xs bg-background"
+                        autoFocus
+                      />
+                    </div>
+
+                    <div className="max-h-44 overflow-y-auto p-1 space-y-0.5">
+                      {filteredEmployees.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-3">
+                          No candidate found matching "{employeeSearch}"
+                        </p>
+                      ) : (
+                        filteredEmployees.map(emp => {
+                          const isSelected = selectedEmployee === emp.id;
+                          return (
+                            <div
+                              key={emp.id}
+                              onClick={() => {
+                                setSelectedEmployee(emp.id);
+                                setIsEmployeeDropdownOpen(false);
+                                setEmployeeSearch('');
+                              }}
+                              className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors text-xs ${
+                                isSelected 
+                                  ? 'bg-primary/10 text-primary font-semibold' 
+                                  : 'hover:bg-muted text-foreground'
+                              }`}
+                            >
+                              <div className="min-w-0 flex items-center gap-2">
+                                <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center font-bold text-[8px] shrink-0 text-muted-foreground">
+                                  {emp.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="truncate font-medium">{emp.name}</p>
+                                  <p className="text-[10px] text-muted-foreground truncate">{emp.title}</p>
+                                </div>
+                              </div>
+                              {isSelected && <Check className="h-3.5 w-3.5 text-primary shrink-0 ml-2" />}
+                            </div>
+                          );
+                        })
                       )}
                     </div>
                   </div>
-
-                  <Button 
-                    onClick={handleIngestTemplate} 
-                    disabled={!selectedFile || !newTemplateName || isIngesting}
-                    className="w-full h-11"
-                  >
-                    {isIngesting ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Analyse visuelle IA en cours...</>
-                    ) : (
-                      <><Plus className="h-4 w-4 mr-2" />Ajouter et extraire le modèle</>
-                    )}
-                  </Button>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Column: Candidate Selection and Compile trigger */}
-        <div className="lg:col-span-1 space-y-6">
-          <Card className="shadow-sm border-muted">
-            <CardHeader className="bg-muted/20 border-b pb-4">
-              <CardTitle className="text-md flex items-center gap-2">
-                <Plus className="h-5 w-5 text-primary" />
-                2. Lancer la compilation
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-6">
-              {/* Select Employee */}
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold">Choisir le candidat</Label>
-                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                  <SelectTrigger className="w-full py-5">
-                    <SelectValue placeholder="Sélectionner un collaborateur..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {employees.map(emp => (
-                      <SelectItem key={emp.id} value={emp.id}>{emp.name} - {emp.title}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                )}
               </div>
+            </div>
 
-              {/* Generate Trigger */}
+            {/* Bottom Action Area */}
+            <div className="space-y-2.5">
               <Button 
                 onClick={handleGenerateCV} 
                 disabled={!selectedEmployee || !selectedTemplateId || isGenerating}
-                className="w-full h-12 text-sm font-semibold shadow-md shadow-primary/10"
+                className="w-full h-10 text-xs sm:text-sm font-semibold shadow-sm"
               >
                 {isGenerating ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Compilation...</>
+                  <><Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />Compiling Document...</>
                 ) : (
-                  <><FileOutput className="h-4 w-4 mr-2" />Générer le CV PDF</>
+                  <><FileOutput className="h-3.5 w-3.5 mr-2" />Generate CV</>
                 )}
               </Button>
 
-              {/* Download link container */}
+              {/* Download Success Card */}
               {downloadUrl && (
-                <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-center space-y-3 animate-in zoom-in-95">
-                  <div className="bg-green-500 p-1.5 rounded-full w-fit mx-auto">
-                    <Check className="h-3 w-3 text-white" />
+                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-center space-y-2 animate-in zoom-in-95">
+                  <div className="flex items-center justify-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-semibold text-xs">
+                    <div className="bg-emerald-500 p-0.5 rounded-full text-white">
+                      <Check className="h-2.5 w-2.5 stroke-[3]" />
+                    </div>
+                    CV Successfully Compiled!
                   </div>
-                  <p className="text-xs font-semibold text-green-800">CV synthétisé avec succès !</p>
                   <a 
                     href={downloadUrl} 
-                    download={`CV_Genere_${selectedEmployee}.pdf`}
-                    className="flex items-center justify-center bg-green-600 text-white py-2 rounded-lg text-xs font-bold hover:bg-green-700 transition-colors w-full"
+                    download={`CV_${currentEmployee?.name?.replace(/\s+/g, '_') || 'Generated'}.pdf`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-center bg-emerald-600 text-white py-2 px-3 rounded-md text-xs font-bold hover:bg-emerald-700 transition-colors w-full shadow-xs gap-1.5"
                   >
-                    <Download className="h-3.5 w-3.5 mr-2" />
-                    Télécharger le PDF
+                    <Download className="h-3.5 w-3.5" />
+                    Download PDF Document
                   </a>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+
+          </CardContent>
+        </Card>
+
       </div>
 
-      {/* Visual Skeleton Preview Modal [1.1.2] */}
+      {/* Fullscreen Preview Modal */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Aperçu du Modèle Squelette</DialogTitle>
-            <DialogDescription>Rendu visuel du document HTML extrait par l'IA</DialogDescription>
+        <DialogContent className="max-w-4xl h-[88vh] w-[95vw] flex flex-col p-4">
+          <DialogHeader className="pb-2 border-b shrink-0">
+            <DialogTitle className="text-base flex items-center gap-2">
+              <Eye className="h-4 w-4 text-primary" />
+              {previewTitle}
+            </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 border rounded-lg overflow-hidden bg-white">
+
+          <div className="flex-1 min-h-0 border rounded-lg overflow-hidden bg-white mt-2">
             {isPreviewLoading ? (
-              <div className="flex flex-col items-center justify-center h-full space-y-2">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Chargement de la structure...</p>
+              <div className="flex flex-col items-center justify-center h-full space-y-2 text-muted-foreground">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <p className="text-xs">Rendering layout...</p>
               </div>
             ) : (
               <iframe
                 title="Visual Skeleton Preview"
                 srcDoc={previewHtml || ''}
-                className="w-full h-full border-none"
+                className="w-full h-full border-none bg-white"
               />
             )}
           </div>
-          <DialogFooter>
-            <Button onClick={() => setIsPreviewOpen(false)}>Fermer l'aperçu</Button>
+
+          <DialogFooter className="pt-2 shrink-0">
+            <Button size="sm" variant="outline" onClick={() => setIsPreviewOpen(false)}>
+              Close Preview
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

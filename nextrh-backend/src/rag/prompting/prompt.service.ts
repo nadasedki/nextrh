@@ -1,9 +1,7 @@
-// src/rag/prompting/prompt.service.ts
-
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
-import { RankedResult,RagStructuredOutput } from '../types/rag-types';
+import { RankedResult } from '../types/rag-types';
 
 
 

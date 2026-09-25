@@ -33,10 +33,6 @@ __decorate([
     __metadata("design:type", String)
 ], Project.prototype, "client", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
-    __metadata("design:type", String)
-], Project.prototype, "role", void 0);
-__decorate([
     (0, typeorm_1.Column)('text', { nullable: true }),
     __metadata("design:type", String)
 ], Project.prototype, "description", void 0);
@@ -48,10 +44,6 @@ __decorate([
     (0, typeorm_1.Column)({ type: 'date', nullable: true }),
     __metadata("design:type", Date)
 ], Project.prototype, "end_date", void 0);
-__decorate([
-    (0, typeorm_1.Column)('text', { array: true, nullable: true }),
-    __metadata("design:type", Array)
-], Project.prototype, "technologies", void 0);
 __decorate([
     (0, typeorm_1.ManyToOne)(() => user_entity_1.User),
     (0, typeorm_1.JoinColumn)({ name: 'user_id' }),

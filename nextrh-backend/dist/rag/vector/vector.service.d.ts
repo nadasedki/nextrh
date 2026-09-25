@@ -19,10 +19,10 @@ export declare class VectorService implements OnModuleInit {
     private readonly logger;
     private readonly client;
     private readonly collection;
-    private readonly VECTOR_SIZE;
+    private readonly vectorSize;
     constructor(configService: ConfigService);
     onModuleInit(): Promise<void>;
-    search(vector: number[], topK?: number): Promise<{
+    search(vector: number[], topK?: number, filter?: any): Promise<{
         id: import("@qdrant/js-client-rest/dist/types/openapi/generated_schema").components["schemas"]["ExtendedPointId"];
         version: number;
         score: number;

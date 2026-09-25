@@ -9,12 +9,24 @@ import { GoogleCalendarModule } from '../google-calendar/google-calendar.module'
 import { ScoringModule } from 'src/scoring/scoring.module';
 import { CertificationsListener } from './CertificationsListener';
 import { CertificationsParserService } from './services/certifications-extraction.service';
+import { CertParsingProcessor } from './processors/cert-parsing.processor';
+import { BullModule } from '@nestjs/bullmq';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 @Module({
-  imports: [TypeOrmModule.forFeature([Certification,User]),ParserModule,GoogleCalendarModule,ScoringModule],
+  imports: [TypeOrmModule.forFeature([Certification,User]), BullModule.registerQueue({
+      name: 'cert-parsing',
+    }), BullBoardModule.forFeature({
+      name: 'cert-parsing',
+      adapter: BullMQAdapter,
+    }),
+    ParserModule,GoogleCalendarModule,ScoringModule],
   controllers: [CertificationsController],
   providers: [CertificationsService,
     CertificationsListener,
-    CertificationsParserService],
+    CertificationsParserService,
+    CertParsingProcessor
+  ],
   exports: [CertificationsService],
 })
 export class CertificationsModule {}

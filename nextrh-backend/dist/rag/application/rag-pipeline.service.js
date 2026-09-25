@@ -14,13 +14,11 @@ exports.RagPipelineService = void 0;
 const common_1 = require("@nestjs/common");
 const perf_hooks_1 = require("perf_hooks");
 const retrieval_service_1 = require("../retrieval/retrieval.service");
-const reranking_service_1 = require("../reranking/reranking.service");
 const prompt_service_1 = require("../prompting/prompt.service");
 const llm_service_1 = require("../llm/llm.service");
 let RagPipelineService = RagPipelineService_1 = class RagPipelineService {
-    constructor(retrievalService, rerankingService, promptService, llmService) {
+    constructor(retrievalService, promptService, llmService) {
         this.retrievalService = retrievalService;
-        this.rerankingService = rerankingService;
         this.promptService = promptService;
         this.llmService = llmService;
         this.logger = new common_1.Logger(RagPipelineService_1.name);
@@ -46,7 +44,7 @@ let RagPipelineService = RagPipelineService_1 = class RagPipelineService {
         state.metadata.retrievalTimeMs = Math.round(perf_hooks_1.performance.now() - retrievalStart);
         state.metadata.retrievedCount = state.retrieved.length;
         this.logger.log(`Retrieval done: ${state.retrieved.length} candidates in ${state.metadata.retrievalTimeMs}ms`);
-        state.reranked = state.retrieved.slice(0, 7);
+        state.reranked = state.retrieved.slice(0, 8);
         state.metadata.rerankedCount = state.reranked.length;
         state.metadata.rerankTimeMs = 0;
         this.logger.log(`Reranking Bypassed: Selected top ${state.reranked.length} .`);
@@ -92,7 +90,6 @@ exports.RagPipelineService = RagPipelineService;
 exports.RagPipelineService = RagPipelineService = RagPipelineService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [retrieval_service_1.RetrievalService,
-        reranking_service_1.RerankingService,
         prompt_service_1.PromptService,
         llm_service_1.LlmService])
 ], RagPipelineService);

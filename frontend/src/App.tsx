@@ -13,6 +13,7 @@ import NotFound from "./pages/NotFound";
 import ResetPassword from "./contexts/ResetPassword";
 import ForgotPassword from "./contexts/ForgotPassword";
 import {  AdminUserManagement } from "./pages/admin";
+import BidEmployeeProfilePage from "./pages/bid/BidEmployeeProfilePage";
 
 const queryClient = new QueryClient();
 
@@ -51,7 +52,7 @@ const App = () => (
               <Route path="/bid/dashboard" element={<BIDDashboard />} />
               <Route path="/bid/directory" element={<EmployeeDirectoryPage />} />
              {/* <Route path="/bid/employee/:memberId" element={<MemberProfilePage />} />*/}
-             <Route path="/bid/employee/:id" element={<MemberProfilePage />} />
+             <Route path="/bid/employee/:id" element={<BidEmployeeProfilePage />} />
               <Route path="/bid/ai-chat" element={<AIChatPage />} />
               <Route path="/bid/cv-generation" element={<CVGenerationPage />} />
             </Route>

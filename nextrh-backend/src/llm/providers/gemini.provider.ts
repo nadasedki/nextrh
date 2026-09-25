@@ -66,14 +66,5 @@ export class GeminiProvider implements ILlmEngine {
       throw err;
     }
   }
-  /*async generateStructured<T>(prompt: string, schema: object): Promise<T> {
-    try {
-      const structured = this.model.withStructuredOutput(schema as any);
-      const response   = await structured.invoke(prompt);
-      return response as T;
-    } catch (err: any) {
-      this.logger.error(`Gemini generateStructured failed: ${err.message}`);
-      throw err;
-    }
-  }*/
+
 }

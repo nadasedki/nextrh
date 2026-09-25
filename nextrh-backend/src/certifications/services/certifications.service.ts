@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -10,132 +11,178 @@ import { Certification } from '../entities/certification.entity';
 import { CreateCertificationDto } from '../dto/create-certification.dto';
 import { UpdateCertificationDto } from '../dto/update-certification.dto';
 import { AiService } from 'src/parser/ai.service';
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import { Cv } from 'src/cvs/entities/cv.entity';
-import { User } from 'src/users/entities/user.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ConfigService } from '@nestjs/config';
+import { InjectQueue } from '@nestjs/bullmq'; 
+import { Queue } from 'bullmq';            
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 @Injectable()
 export class CertificationsService {
-private readonly certUploadDir: string;
-
+  private readonly logger = new Logger(CertificationsService.name);
+  private readonly certUploadDir: string;
 
   constructor(
     @InjectRepository(Certification)
     private readonly certificationRepo: Repository<Certification>,
     private readonly aiService: AiService,
     private readonly configService: ConfigService,
-    private eventEmitter: EventEmitter2,
+    private readonly eventEmitter: EventEmitter2,
+    @InjectQueue('cert-parsing') private readonly certQueue: Queue, // 👈 Injected Queue
   ) {
-      const configuredPath = this.configService.get<string>('UPLOAD_CERT_DESTINATION') || './uploads/certifications';
-    
+    const configuredPath = this.configService.get<string>('UPLOAD_CERT_DESTINATION') || './uploads/certifications';
     this.certUploadDir = path.isAbsolute(configuredPath)
       ? configuredPath
       : path.join(process.cwd(), configuredPath);
-
   }
-  async saveCertFileToDisk(fileBuffer: Buffer, employeeId: number, originalName: string): Promise<string> {
-  await fs.mkdir(this.certUploadDir, { recursive: true });
-  const ext = path.extname(originalName) || '.pdf';
-  const fileName = `cert-${employeeId}-${Date.now()}${ext}`;
-  const fullPath = path.join(this.certUploadDir, fileName);
-  await fs.writeFile(fullPath, fileBuffer);
-  return `uploads/certifications/${fileName}`;
-}
+
+   async enqueueCertParsing(employeeId: number, file: Express.Multer.File, currentUserFullName: string) {
+    // 1. Save file to disk first
+    await fs.mkdir(this.certUploadDir, { recursive: true });
+    const ext = path.extname(file.originalname) || '.pdf';
+    const fileName = `cert-${employeeId}-${Date.now()}${ext}`;
+    const fullDiskPath = path.join(this.certUploadDir, fileName);
+    await fs.writeFile(fullDiskPath, file.buffer);
+
+    const relativePath = path.join('uploads', 'certifications', fileName).replace(/\\/g, '/');
+
+    // 2. Add job to Redis Queue (1 attempt only so invalid files are not retried)
+    const job = await this.certQueue.add(
+      'parse-certificate',
+      {
+        employeeId,
+        fullDiskPath,
+        relativePath,
+        currentUserFullName,
+        originalName: file.originalname,
+      },
+      {
+        attempts: 1,
+        removeOnComplete: { age: 3600, count: 500 }, // Keep completed in Redis for 1h so status endpoint can read result
+        removeOnFail: { age: 86400 },
+      },
+    );
+
+    return {
+      status: 'queued',
+      message: 'Certificate uploaded and queued for AI analysis.',
+      jobId: job.id,
+    };
+  }
+
+  async getJobStatus(jobId: string) {
+    const job = await this.certQueue.getJob(jobId);
+
+    if (!job) {
+      return { jobId, state: 'completed', status: 'completed', progress: 100 };
+    }
+
+    const state = await job.getState();
+    return {
+      jobId: job.id,
+      state,
+      progress: job.progress,
+      result: job.returnvalue || null,
+      failedReason: job.failedReason || null,
+    };
+  }
+
+   async processCertificateFromDisk(
+    employeeId: number,
+    fullDiskPath: string,
+    relativePath: string,
+    currentUserFullName: string,
+  ) {
+    try {
+      // 1. AI Extraction
+      const aiData = await this.aiService.extractCertificate(fullDiskPath);
+      const certObj = Array.isArray(aiData) ? aiData[0] : aiData;
+
+      if (!certObj || Object.keys(certObj).length === 0) {
+        throw new BadRequestException('AI could not extract valid data from document.');
+      }
+
+      // 2. Security Validation: Identity Check
+      const extractedHolder = (certObj.certificate_holder || certObj.holder_name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+      const expectedHolder = (currentUserFullName || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+      if (!expectedHolder) {
+        throw new BadRequestException('User profile name could not be verified from token.');
+      }
+
+      if (extractedHolder && !expectedHolder.includes(extractedHolder) && !extractedHolder.includes(expectedHolder)) {
+        await fs.unlink(fullDiskPath).catch(() => {});
+        throw new BadRequestException(
+          `Identity mismatch: This certificate belongs to "${certObj.certificate_holder}", not "${currentUserFullName}".`
+        );
+      }
+
+      // 3. Format Dates and calculate status
+      const issueDate = this.formatDateToISO(certObj.date_of_obtention || certObj.issue_date);
+      const expiryDate = this.formatDateToISO(certObj.date_of_expiration || certObj.expiry_date);
+      const status = this.calculateStatus(expiryDate);
+
+      return {
+        certName: certObj.certificate_name || certObj.name || 'Certificate',
+        provider: certObj.provider || certObj.issuer || 'Provider',
+        issueDate,
+        expiryDate,
+        holderName: certObj.certificate_holder || currentUserFullName,
+        status,
+        filePath: relativePath,
+      };
+    } catch (error: any) {
+      this.logger.error(`Certificate parsing failed: ${error.message}`);
+      await fs.unlink(fullDiskPath).catch(() => {});
+      throw error;
+    }
+  }
 
   async findMyCertifications(employeeId: number) {
-    const certs = await this.certificationRepo.find({
+    return await this.certificationRepo.find({
       where: { userId: employeeId },
       order: { expiryDate: 'ASC' },
-      relations: ['user'], 
+      relations: ['user'],
     });
-    
-
-    return certs;
-  }
-async create(
-  employeeId: number,
-  dto: CreateCertificationDto,
-  fileBuffer?: Buffer,      
-  originalName?: string,    
-) {
-  if (!dto.name || !dto.issuer) {
-    throw new BadRequestException('Name and Issuer are required');
   }
 
-  
-  let savedFilePath: string | null = dto.filePath || null;
-  if (fileBuffer && originalName) {
-    savedFilePath = await this.saveCertFileToDisk(fileBuffer, employeeId, originalName);
-  }
-
-  const targetExpiry = dto.expirationDate ? new Date(dto.expirationDate) : null;
-  const calculatedStatus = this.calculateStatus(targetExpiry);
-
-  
-  const certification = this.certificationRepo.create({
-    certName: dto.name,
-    provider: dto.issuer,
-    issueDate: dto.issueDate ? new Date(dto.issueDate) : null,
-    expiryDate: targetExpiry,
-    credentialId: dto.credentialId,
-    status: calculatedStatus,
-    userId: employeeId,
-    filePath: savedFilePath, 
-  });
-
-  const savedCert = await this.certificationRepo.save(certification);
-
-  this.eventEmitter.emit('certification.saved', {
-    certId: savedCert.certId,
-    employeeId: employeeId,
-    certName: savedCert.certName,
-    expiryDate: savedCert.expiryDate,
-  });
-
-  this.eventEmitter.emit('certification.index_saved', {
-    entityId: savedCert.certId,
-    userId: employeeId,
-  });
-
-  return savedCert;
-}
- /* async create(employeeId: number, dto: CreateCertificationDto) {
+  async create(employeeId: number, dto: CreateCertificationDto) {
     if (!dto.name || !dto.issuer) {
       throw new BadRequestException('Name and Issuer are required');
     }
-const targetExpiry = dto.expirationDate ? new Date(dto.expirationDate) : null;
-const calculatedStatus = this.calculateStatus(targetExpiry);
+
+    const targetExpiry = dto.expirationDate ? new Date(dto.expirationDate) : null;
+    const calculatedStatus = this.calculateStatus(targetExpiry);
 
     const certification = this.certificationRepo.create({
-      certName: dto.name,           
-      provider: dto.issuer,          
+      certName: dto.name,
+      provider: dto.issuer,
       issueDate: dto.issueDate ? new Date(dto.issueDate) : null,
       expiryDate: targetExpiry,
       credentialId: dto.credentialId,
       status: calculatedStatus,
       userId: employeeId,
       filePath: dto.filePath || null,
-
     });
 
-     const savedCert = await this.certificationRepo.save(certification);
-     
-    this.eventEmitter.emit('certification.saved', { 
+    const savedCert = await this.certificationRepo.save(certification);
+
+    this.eventEmitter.emit('certification.saved', {
       certId: savedCert.certId,
-      employeeId: employeeId, 
-      certName: savedCert.certName, 
-      expiryDate: savedCert.expiryDate 
+      employeeId,
+      certName: savedCert.certName,
+      expiryDate: savedCert.expiryDate,
     });
 
-     this.eventEmitter.emit('certification.index_saved', { 
+    this.eventEmitter.emit('certification.index_saved', {
       entityId: savedCert.certId,
-      userId: employeeId, 
+      userId: employeeId,
     });
-  return savedCert;
-  }*/
+
+    return savedCert;
+  }
 
   async update(id: number, employeeId: number, dto: UpdateCertificationDto) {
     if (Object.keys(dto).length === 0) {
@@ -143,196 +190,149 @@ const calculatedStatus = this.calculateStatus(targetExpiry);
     }
 
     const certification = await this.certificationRepo.findOne({
-      where: { certId: id }, 
+      where: { certId: id },
       relations: ['user'],
     });
 
-    if (!certification) {
-      throw new NotFoundException('Certification not found');
-    }
+    if (!certification) throw new NotFoundException('Certification not found');
+    if (certification.userId !== employeeId) throw new ForbiddenException('Unauthorized access');
 
-    if (certification.userId !== employeeId) {
-      throw new ForbiddenException('You cannot modify this certification');
-    }
-
-   
     if (dto.name) certification.certName = dto.name;
     if (dto.issuer) certification.provider = dto.issuer;
     if (dto.issueDate) certification.issueDate = new Date(dto.issueDate);
-    if (dto.expirationDate) certification.expiryDate = new Date(dto.expirationDate);
     if (dto.credentialId !== undefined) certification.credentialId = dto.credentialId;
+    
     if (dto.expirationDate !== undefined) {
-    const targetExpiry = dto.expirationDate ? new Date(dto.expirationDate) : null;
-    certification.expiryDate = targetExpiry;
-    certification.status = this.calculateStatus(targetExpiry);
-  } else if (dto.status) {
-    // Si l'utilisateur force manuellement un statut sans toucher à la date
-    certification.status = dto.status;
-  }
-      const updatedCert = await this.certificationRepo.save(certification);
- 
-      this.eventEmitter.emit('certification.updated', { 
-      employeeId: employeeId, 
-      certId: updatedCert.certId, 
-    });
-      this.eventEmitter.emit('certification.index_saved', { 
-      entityId: updatedCert.certId,
-      userId: employeeId, 
-    });
-
-     return updatedCert;
-  }
-async remove(id: number, employeeId: number) {
-  const certification = await this.certificationRepo.findOne({
-    where: { certId: id },
-    relations: ['user'],
-  });
-
-  if (!certification) {
-    throw new NotFoundException('Certification not found');
-  }
-
-  if (certification.userId !== employeeId) {
-    throw new ForbiddenException('You cannot delete this certification');
-  }
-
-  // 1. Delete the physical certificate file from disk (if it has its own dedicated file)
-  if (certification.filePath && !certification.filePath.includes('uploads/cvs/')) {
-    try {
-      const fullPath = path.join(process.cwd(), certification.filePath);
-      await fs.unlink(fullPath);
-    } catch (err) {
-      // Ignore if file doesn't exist on disk
+      const targetExpiry = dto.expirationDate ? new Date(dto.expirationDate) : null;
+      certification.expiryDate = targetExpiry;
+      certification.status = this.calculateStatus(targetExpiry);
+    } else if (dto.status) {
+      certification.status = dto.status;
     }
+
+    const updatedCert = await this.certificationRepo.save(certification);
+
+    this.eventEmitter.emit('certification.updated', { employeeId, certId: updatedCert.certId });
+    this.eventEmitter.emit('certification.index_saved', { entityId: updatedCert.certId, userId: employeeId });
+
+    return updatedCert;
   }
 
-  // 2. Remove from database
-  await this.certificationRepo.remove(certification);
-
-  // 3. Emit events cleanly
-  this.eventEmitter.emit('certification.deleted', {
-    employeeId: employeeId,
-    certId: id,
-  });
-
-  this.eventEmitter.emit('certification.index_deleted', {
-    entityId: id,
-    userId: employeeId,
-  });
-}
-  /*async remove(id: number, employeeId: number) {
+  async remove(id: number, employeeId: number) {
     const certification = await this.certificationRepo.findOne({
-      where: { certId: id }, 
+      where: { certId: id },
       relations: ['user'],
     });
-  this.eventEmitter.emit('certification.deleted', { certId: id });
-    if (!certification) {
-      throw new NotFoundException('Certification not found');
+
+    if (!certification) throw new NotFoundException('Certification not found');
+    if (certification.userId !== employeeId) throw new ForbiddenException('Unauthorized access');
+
+    if (certification.filePath && !certification.filePath.includes('uploads/cvs/')) {
+      try {
+        const fullDiskPath = path.isAbsolute(certification.filePath)
+          ? certification.filePath
+          : path.join(process.cwd(), certification.filePath);
+        await fs.unlink(fullDiskPath);
+      } catch (err: any) {
+        this.logger.warn(`Could not delete file: ${err.message}`);
+      }
     }
 
-    if (certification.userId !== employeeId) {
-      throw new ForbiddenException('You cannot delete this certification');
-    }
+    await this.certificationRepo.remove(certification);
 
-    await  this.certificationRepo.remove(certification);
-     // MISE À JOUR 
- this.eventEmitter.emit('certification.deleted', { 
-      employeeId: employeeId, 
-      certId: id 
-    });
+    this.eventEmitter.emit('certification.deleted', { employeeId, certId: id });
+    this.eventEmitter.emit('certification.index_deleted', { entityId: id, userId: employeeId });
+  }
 
-     this.eventEmitter.emit('certification.index_deleted', { 
-      entityId: id,
-      userId: employeeId, 
-    });
-  }*/
- async createBulkFromParsedData(certsData: any[], userId: number, filePath?: string, cvEntity?: Cv) {
+  async createBulkFromParsedData(certsData: any[], userId: number, filePath?: string, cvEntity?: Cv) {
     if (!certsData || certsData.length === 0) return [];
 
     const entities = certsData.map((cert) => {
+      const targetExpiry = cert.expiry_date ? new Date(cert.expiry_date) : null;
       return this.certificationRepo.create({
-        certName: cert.certName,
-         provider: cert.provider,
-        issueDate: cert.issue_date ,
-        expiryDate: cert.expiry_date , 
-        userId: userId,
+        certName: cert.certName || cert.cert_name,
+        provider: cert.provider,
+        issueDate: cert.issue_date ? new Date(cert.issue_date) : null,
+        expiryDate: targetExpiry,
+        status: this.calculateStatus(targetExpiry),
+        userId,
         filePath: filePath || null,
-        cv: cvEntity, 
+        cv: cvEntity,
       });
     });
 
     return await this.certificationRepo.save(entities);
   }
- 
 
-  /**
-   * Helper: Converts "Février 2020" to a JavaScript Date object
-   */
-private calculateStatus(expiryDate: Date | string | null): string {
-  if (!expiryDate) return 'active';
+  public calculateStatus(expiryDate: Date | string | null): 'active' | 'expired' | 'expiring_soon' {
+    if (!expiryDate) return 'active';
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  const expiry = new Date(expiryDate);
-  expiry.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  // Si la date d'expiration est passée
-  if (expiry < today) {
-    return 'expired';
+    const expiry = new Date(expiryDate);
+    expiry.setHours(0, 0, 0, 0);
+
+    if (isNaN(expiry.getTime())) return 'active';
+    if (expiry < today) return 'expired';
+
+    const diffDays = (expiry.getTime() - today.getTime()) / (1000 * 3600 * 24);
+    if (diffDays <= 30) return 'expiring_soon';
+
+    return 'active';
   }
 
-  // Optionnel : Expire bientôt (ex: moins de 30 jours)
-  const thirtyDaysFromNow = new Date();
-  thirtyDaysFromNow.setDate(today.getDate() + 30);
-  if (expiry <= thirtyDaysFromNow) {
-    return 'expiring_soon';
+  private formatDateToISO(dateStr: string | null | undefined): string | null {
+    if (!dateStr || String(dateStr).trim().toLowerCase() === 'null') return null;
+
+    let cleanedStr = dateStr
+      .trim()
+      .replace(/^(monday|tuesday|wednesday|thursday|friday|saturday|sunday|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)[,\s]+/i, '')
+      .replace(/janvier/i, 'January').replace(/fevrier/i, 'February').replace(/mars/i, 'March')
+      .replace(/avril/i, 'April').replace(/mai/i, 'May').replace(/juin/i, 'June')
+      .replace(/juillet/i, 'July').replace(/aout/i, 'August').replace(/septembre/i, 'September')
+      .replace(/octobre/i, 'October').replace(/novembre/i, 'November').replace(/decembre/i, 'December');
+
+    const timestamp = Date.parse(cleanedStr);
+    if (isNaN(timestamp)) return null;
+
+    const d = new Date(timestamp);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
   }
 
-  return 'active';
-}
-/**
- * Évalue toutes les certifications actives ou arrivant à expiration 
- * pour mettre à jour leur statut en Base de Données (ex: traitement quotidien/cron).
- */
-async evaluateAllCertificationsStatus(): Promise<{ updatedCount: number }> {
-  // 1. Récupérer toutes les certifications qui ont une date d'expiration
-  const certifications = await this.certificationRepo.find({
-    where: [
-      { status: 'active' },
-      { status: 'expiring_soon' }
-    ]
-  });
+  async evaluateAllCertificationsStatus(): Promise<{ updatedCount: number }> {
+    const certifications = await this.certificationRepo.find({
+      where: [{ status: 'active' }, { status: 'expiring_soon' }]
+    });
 
-  let updatedCount = 0;
+    let updatedCount = 0;
 
-  for (const cert of certifications) {
-    if (!cert.expiryDate) continue;
+    for (const cert of certifications) {
+      if (!cert.expiryDate) continue;
 
-    // Calculer le nouveau statut théorique
-    const newStatus = this.calculateStatus(cert.expiryDate);
+      const newStatus = this.calculateStatus(cert.expiryDate);
 
-    // Si le statut a changé, on met à jour et on émet un événement
-    if (cert.status !== newStatus) {
-      const oldStatus = cert.status;
-      cert.status = newStatus;
-      await this.certificationRepo.save(cert);
-      updatedCount++;
+      if (cert.status !== newStatus) {
+        const oldStatus = cert.status;
+        cert.status = newStatus;
+        await this.certificationRepo.save(cert);
+        updatedCount++;
 
-      // Optionnel: Émettre un événement spécifique si le statut change (ex: envoyer un mail)
-      this.eventEmitter.emit('certification.status.changed', {
-        certId: cert.certId,
-        employeeId: cert.userId,
-        certName: cert.certName,
-        oldStatus: oldStatus,
-        newStatus: newStatus,
-        expiryDate: cert.expiryDate
-      });
+        this.eventEmitter.emit('certification.status.changed', {
+          certId: cert.certId,
+          employeeId: cert.userId,
+          certName: cert.certName,
+          oldStatus,
+          newStatus,
+          expiryDate: cert.expiryDate
+        });
+      }
     }
+
+    return { updatedCount };
   }
-
-  return { updatedCount };
-}
-
-
 }

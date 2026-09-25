@@ -9,7 +9,7 @@ export declare class CvParserController {
     private readonly geminiParser;
     private readonly logger;
     constructor(cvParserOrchestrator: CvExtractionOrchestrator, cvEvaluationService: CvEvaluationService, configService: ConfigService, geminiParser: CvMultimodalParserService);
-    parseCv(file: Express.Multer.File): Promise<import("./interfaces/cv-extraction.types").ParsedCvResponse>;
+    parseCv(file: Express.Multer.File): Promise<import("./interfaces/cv-extraction.types").ParsedCvResponse | import("./cv-multimodal-parser.service").ParsedCvResponse>;
     runEvaluation(cacheOnlyStr?: string): Promise<{
         status: string;
         message: string;

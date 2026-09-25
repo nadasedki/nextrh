@@ -147,18 +147,36 @@ let EmployeesService = class EmployeesService {
     }
     async findAllEmployees() {
         return this.userRepository.find({
-            relations: ['certifications'],
-            where: { active: true },
-            order: { score: 'DESC' }
+            relations: ['certifications', 'role'],
+            where: {
+                active: true,
+                role: {
+                    role_name: 'EMPLOYEE',
+                },
+            },
+            order: { score: 'DESC' },
         });
     }
     async searchEmployees(query) {
         return this.userRepository.find({
             where: [
-                { full_name: (0, typeorm_2.Like)(`%${query}%`), active: true },
-                { title: (0, typeorm_2.Like)(`%${query}%`), active: true },
+                {
+                    full_name: (0, typeorm_2.Like)(`%${query}%`),
+                    active: true,
+                    role: {
+                        role_name: 'EMPLOYEE',
+                    },
+                },
+                {
+                    title: (0, typeorm_2.Like)(`%${query}%`),
+                    active: true,
+                    role: {
+                        role_name: 'EMPLOYEE',
+                    },
+                },
             ],
-            relations: ['certifications'],
+            relations: ['certifications', 'role'],
+            order: { score: 'DESC' },
         });
     }
     async findOne(id) {

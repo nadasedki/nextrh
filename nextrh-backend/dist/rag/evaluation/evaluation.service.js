@@ -221,8 +221,11 @@ let EvaluationService = EvaluationService_1 = class EvaluationService {
         const semanticSimilarityScore = this.calculateCosineSimilarity(expectedVec, generatedVec);
         const faithfulnessText = textForFaithfulness ?? input.generatedAnswer;
         const faithfulnessScore = this.calculateFaithfulness(faithfulnessText, input.retrievedContextText);
-        const success = faithfulnessScore >= this.FAITHFULNESS_SUCCESS_THRESHOLD &&
-            (rougeLScore >= this.ROUGE_SUCCESS_THRESHOLD || semanticSimilarityScore >= this.SEMANTIC_SUCCESS_THRESHOLD);
+        const isNegativeQuery = !input.expectedDocIds || input.expectedDocIds.length === 0;
+        const success = isNegativeQuery
+            ? (semanticSimilarityScore >= 0.85)
+            : (faithfulnessScore >= this.FAITHFULNESS_SUCCESS_THRESHOLD &&
+                (rougeLScore >= this.ROUGE_SUCCESS_THRESHOLD || semanticSimilarityScore >= this.SEMANTIC_SUCCESS_THRESHOLD));
         return {
             precisionAt3, recallAt3,
             precisionAt5, recallAt5,

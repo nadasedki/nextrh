@@ -25,9 +25,9 @@ let TrainingController = class TrainingController {
         this.trainingService = trainingService;
     }
     async findMine(req) {
-        console.log('🚨 GET /trainings/me - Request received');
+        console.log(' GET /trainings/me - Request received');
         const userId = req.user?.userId;
-        console.log('🚨 GET /trainings/me - Found UserId:', userId);
+        console.log(' GET /trainings/me - Found UserId:', userId);
         if (!userId) {
             throw new Error('User ID is missing from JWT token!');
         }

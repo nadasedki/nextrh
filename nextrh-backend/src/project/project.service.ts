@@ -56,11 +56,10 @@ async create(userId: number, createDto: CreateProjectDto): Promise<any> {
       id: p.id,
       name: p.name,
       client: p.client,
-      role: p.role,
       description: p.description,
       startDate: p.start_date, 
       endDate: p.end_date,     
-      technologies: p.technologies || [],
+      
     }));
   }
 
@@ -79,8 +78,6 @@ async create(userId: number, createDto: CreateProjectDto): Promise<any> {
         description: proj.description,
         start_date: startDate,
         end_date: endDate,
-        role: proj.role || '', 
-        technologies: proj.technologies || [], 
         cv: cvEntity, 
       });
     });
@@ -101,17 +98,15 @@ async create(userId: number, createDto: CreateProjectDto): Promise<any> {
     if (!years) return { startDate: null, endDate: null };
 
     if (years.length === 1) {
-      // If only one year (e.g., "2020"), set it as the end date
-      return { 
+         return { 
         startDate: null, 
-        endDate: new Date(parseInt(years[0]), 11, 31) // Dec 31st of that year
+        endDate: new Date(parseInt(years[0]), 11, 31) 
       };
     }
 
-    // If a range (e.g., "2019 - 2021")
-    return {
-      startDate: new Date(parseInt(years[0]), 0, 1),  // Jan 1st
-      endDate: new Date(parseInt(years[1]), 11, 31), // Dec 31st
+     return {
+      startDate: new Date(parseInt(years[0]), 0, 1), 
+      endDate: new Date(parseInt(years[1]), 11, 31), 
     };
   }
 

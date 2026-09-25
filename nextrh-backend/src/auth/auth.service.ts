@@ -1,4 +1,3 @@
-// src/auth/auth.service.ts
 import { 
   BadRequestException, 
   ConflictException, 
@@ -28,8 +27,7 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-    private readonly mailService: MailService, // Injected the clean MailService
-    
+    private readonly mailService: MailService, 
     @InjectRepository(PasswordResetToken)
     private readonly tokenRepository: Repository<PasswordResetToken>, // Injected database repository
   ) {}
@@ -91,13 +89,11 @@ export class AuthService {
    * Register a new user (Only accessible to Admins / Team Leaders)
    */
   async register(dto: RegisterDto) {
-    // 2. Pre-emptively check if the email is already taken
     const existingUser = await this.usersService.findByEmail(dto.email);
     if (existingUser) {
       throw new ConflictException('This email address is already registered in the system.');
     }
 
-    // 3. If email is unique, safely hash and create the account
     const hashedPassword = await bcrypt.hash(dto.password, 10);
     
     return this.usersService.create({ 
@@ -115,23 +111,20 @@ export class AuthService {
     const { email } = dto;
     const user = await this.usersService.findByEmail(email);
     
-    // Security Best Practice: Never tell the client if the email exists to prevent enumeration attacks.
     if (!user) {
       return { message: 'If an account exists with this email, a password reset link has been sent.' };
     }
 
     const token = uuidv4();
-    const tokenHash = createHash('sha256').update(token).digest('hex'); // Hash the token securely
+    const tokenHash = createHash('sha256').update(token).digest('hex'); 
     const expiresAt = new Date(Date.now() + 3600000); // 1 hour expiration duration
 
-    // Save token hash to database
     await this.tokenRepository.save({
       token_hash: tokenHash,
       user_id: user.user_id,
       expires_at: expiresAt,
     });
 
-    // Send the email with the raw (unhashed) token link
     await this.mailService.sendResetPasswordEmail(user.email, user.full_name, token);
 
     return { message: 'If an account exists with this email, a password reset link has been sent.' };
@@ -143,7 +136,6 @@ export class AuthService {
   async resetPassword(dto: ResetPasswordDto) {
     const { token, newPassword } = dto;
     
-    // Compute the hash of the received token to match it against database record
     const tokenHash = createHash('sha256').update(token).digest('hex');
     const tokenRecord = await this.tokenRepository.findOne({ where: { token_hash: tokenHash } });
 
@@ -151,11 +143,11 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired reset link.');
     }
 
-    // Update password
+    
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await this.usersService.updatePassword(tokenRecord.user_id, hashedPassword);
 
-    // Mark token as used to prevent replay attacks
+    
     tokenRecord.used = true;
     await this.tokenRepository.save(tokenRecord);
 

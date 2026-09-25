@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge'; 
 import { toast } from 'sonner';
-import { Trash2, Search, UserCheck, Loader2, Eye, Key, UserX } from 'lucide-react'; 
+import { Trash2, Search, UserCheck, Loader2, Eye, Key, UserX, UserPlus, Users } from 'lucide-react'; 
 import { useAuth } from '@/contexts/AuthContext';
 
 interface DisplayUser {
@@ -84,7 +84,7 @@ export const AdminUserManagement: React.FC = () => {
       setEmail('');
       setPassword(''); 
       setFullName('');
-      fetchUserDirectory(); // Refresh directory table
+      fetchUserDirectory();
     } catch (err: any) {
       toast.error(err.message || 'Error creating user');
     } finally {
@@ -92,7 +92,7 @@ export const AdminUserManagement: React.FC = () => {
     }
   };
 
-  // Handle Deactivating / Activating a User (Uses the PATCH route)
+  // Handle Deactivating / Activating a User
   const handleToggleActive = async (user: DisplayUser) => {
     try {
       const response = await fetch(`http://localhost:3000/users/${user.user_id}`, {
@@ -107,7 +107,7 @@ export const AdminUserManagement: React.FC = () => {
       if (!response.ok) throw new Error('Failed to update status');
 
       toast.success(`User successfully ${!user.active ? 'activated' : 'deactivated'}`);
-      fetchUserDirectory(); // Refresh directory table
+      fetchUserDirectory();
     } catch (err: any) {
       toast.error(err.message || 'Error updating status');
     }
@@ -126,13 +126,13 @@ export const AdminUserManagement: React.FC = () => {
       if (!response.ok) throw new Error('Failed to delete account');
       
       toast.success('User account terminated successfully');
-      fetchUserDirectory(); // Refresh directory table
+      fetchUserDirectory();
     } catch (err: any) {
       toast.error(err.message || 'Error deleting user');
     }
   };
 
-  // Handle manual password reset triggers (sends real email via backend SMTP)
+  // Handle manual password reset triggers
   const handleTriggerReset = async (email: string) => {
     try {
       const response = await fetch('http://localhost:3000/auth/forgot-password', {
@@ -157,7 +157,7 @@ export const AdminUserManagement: React.FC = () => {
 
   // Filter and search users (Excluding Administrators)
   const filteredUsers = users.filter((u) => {
-    if (u.role?.role_name === 'ADMIN') return false; // Hide Admins 
+    if (u.role?.role_name === 'ADMIN') return false;
 
     const searchString = searchTerm.toLowerCase();
     return (
@@ -168,46 +168,75 @@ export const AdminUserManagement: React.FC = () => {
   });
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">System Administration</h1>
-        <p className="text-muted-foreground">
+    <div className="space-y-4 max-w-7xl mx-auto h-[calc(100vh-140px)] flex flex-col overflow-hidden animate-fade-in px-3 sm:px-6">
+      
+      {/* Header (Shrink-0 to keep height tight) */}
+      <div className="shrink-0">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">System Administration</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm">
           Provision new user credentials, monitor active profiles, and manage structural security roles.
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3 items-start">
-        {/* Provision Form */}
-        <Card className="border border-muted shadow-sm lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Account Provisioning</CardTitle>
-            <CardDescription>Register a new system profile.</CardDescription>
+      {/* Main Grid fitting remaining screen height */}
+      <div className="grid gap-4 lg:grid-cols-3 items-stretch flex-1 min-h-0 overflow-hidden">
+        
+        {/* Provision Form Card */}
+        <Card className="border border-muted shadow-sm lg:col-span-1 flex flex-col h-full overflow-hidden bg-card">
+          <CardHeader className="py-3 px-4 shrink-0 bg-muted/20 border-b">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <UserPlus className="h-4 w-4 text-primary" />
+              Account Provisioning
+            </CardTitle>
+            <CardDescription className="text-xs">Register a new system profile</CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleCreateUser} className="space-y-4">
+
+          <CardContent className="p-4 flex-1 overflow-y-auto space-y-3.5">
+            <form onSubmit={handleCreateUser} className="space-y-3">
               <div className="space-y-1">
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+                <Label htmlFor="fullName" className="text-xs font-medium">Full Name</Label>
+                <Input 
+                  id="fullName" 
+                  value={fullName} 
+                  onChange={(e) => setFullName(e.target.value)} 
+                  className="h-8.5 text-xs" 
+                  required 
+                />
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="email">Email Address</Label>
-                <Input id="email" type="email" placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <Label htmlFor="email" className="text-xs font-medium">Email Address</Label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="name@company.com" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                  className="h-8.5 text-xs" 
+                  required 
+                />
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <Label htmlFor="password" className="text-xs font-medium">Password</Label>
+                <Input 
+                  id="password" 
+                  type="password" 
+                  placeholder="••••••••" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  className="h-8.5 text-xs" 
+                  required 
+                />
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="role">Security Role</Label>
+                <Label htmlFor="role" className="text-xs font-medium">Security Role</Label>
                 <select
                   id="role"
                   value={roleId}
                   onChange={(e) => setRoleId(Number(e.target.value))}
-                  className="w-full p-2 border border-muted rounded-md bg-background text-foreground text-sm h-10"
+                  className="w-full p-2 border border-muted rounded-md bg-background text-foreground text-xs h-8.5 focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                   <option value={1}>Employee (EMPLOYEE)</option>
                   <option value={2}>Team Manager (TEAM_LEADER)</option>
@@ -216,116 +245,117 @@ export const AdminUserManagement: React.FC = () => {
                 </select>
               </div>
 
-              <Button type="submit" className="w-full h-10 mt-2" disabled={isSubmitLoading}>
+              <Button type="submit" className="w-full h-9 text-xs font-semibold mt-3" disabled={isSubmitLoading}>
                 {isSubmitLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Register Profile'}
               </Button>
             </form>
           </CardContent>
         </Card>
 
-        {/* Directory Table */}
-        <Card className="border border-muted shadow-sm lg:col-span-2 h-full">
-          <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
-            <div className="space-y-1.5">
-              {/* Dynamic Badge directly next to Title */}
-              <CardTitle className="flex items-center gap-2">
+        {/* User Directory Table Card */}
+        <Card className="border border-muted shadow-sm lg:col-span-2 flex flex-col h-full overflow-hidden bg-card">
+          <CardHeader className="py-2.5 px-4 shrink-0 bg-muted/20 border-b flex flex-row items-center justify-between space-y-0">
+            <div className="space-y-0.5">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" />
                 User Directory
                 {!isFetchLoading && (
-                  <Badge variant="secondary" className="text-xs bg-primary/5 text-primary border border-primary/10">
+                  <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-primary/20 h-5 px-2">
                     {filteredUsers.length} accounts
                   </Badge>
                 )}
               </CardTitle>
-              <CardDescription>Real-time view of system active profiles.</CardDescription>
+              <CardDescription className="text-xs">Active and manageable profiles</CardDescription>
             </div>
             
             {/* Search Input */}
-            <div className="relative w-48 md:w-64">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <div className="relative w-40 sm:w-56">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="Search name, email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 h-9"
+                className="pl-8 h-8 text-xs bg-background"
               />
             </div>
           </CardHeader>
           
-          <CardContent>
+          <CardContent className="p-3 sm:p-4 flex-1 min-h-0 flex flex-col overflow-hidden">
             {isFetchLoading ? (
-              <div className="flex flex-col items-center justify-center py-12 space-y-2">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Loading directory...</p>
+              <div className="flex flex-col items-center justify-center h-full space-y-2 text-muted-foreground">
+                <Loader2 className="h-7 w-7 animate-spin text-primary" />
+                <p className="text-xs">Loading directory...</p>
               </div>
             ) : filteredUsers.length === 0 ? (
-              <div className="text-center py-12 text-sm text-muted-foreground">
+              <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
                 No profiles match your search criteria.
               </div>
             ) : (
-              <div className="overflow-x-auto border border-muted rounded-md">
+              /* Internal Scrollable Table Area */
+              <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto border border-muted rounded-lg relative bg-background shadow-xs">
                 <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-muted/30 border-b border-muted text-xs font-semibold text-muted-foreground uppercase">
-                      <th className="p-3">Profile Name</th>
-                      <th className="p-3">Email Address</th>
-                      <th className="p-3">Role</th>
-                      <th className="p-3">Status</th>
-                      <th className="p-3 text-right">Actions</th>
+                  <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm border-b border-muted">
+                    <tr className="text-[11px] font-semibold text-muted-foreground uppercase">
+                      <th className="p-2.5 pl-3">Profile Name</th>
+                      <th className="p-2.5">Email Address</th>
+                      <th className="p-2.5">Role</th>
+                      <th className="p-2.5">Status</th>
+                      <th className="p-2.5 pr-3 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="text-sm divide-y divide-muted">
+                  <tbody className="text-xs divide-y divide-muted bg-card">
                     {filteredUsers.map((user) => (
-                      <tr key={user.user_id} className="hover:bg-muted/10 transition-colors">
-                        <td className="p-3 font-medium">{user.full_name}</td>
-                        <td className="p-3 text-muted-foreground">{user.email}</td>
-                        <td className="p-3">
-                          <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-muted border border-muted-foreground/20 text-muted-foreground">
+                      <tr key={user.user_id} className="hover:bg-muted/30 transition-colors">
+                        <td className="p-2.5 pl-3 font-medium text-foreground">{user.full_name}</td>
+                        <td className="p-2.5 text-muted-foreground">{user.email}</td>
+                        <td className="p-2.5">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-muted border border-muted-foreground/20 text-muted-foreground">
                             {user.role?.role_name || 'N/A'}
                           </span>
                         </td>
-                        <td className="p-3">
-                          <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${user.active ? 'text-success' : 'text-muted-foreground'}`}>
-                            <span className={`h-2 w-2 rounded-full ${user.active ? 'bg-success' : 'bg-muted-foreground'}`} />
+                        <td className="p-2.5">
+                          <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold ${user.active ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${user.active ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
                             {user.active ? 'Active' : 'Inactive'}
                           </span>
                         </td>
                         
                         {/* Actions column */}
-                        <td className="p-3 text-right space-x-1 whitespace-nowrap">
+                        <td className="p-2.5 pr-3 text-right space-x-0.5 whitespace-nowrap">
                           {/* View Profile button (Employee only) */}
                           {user.role?.role_name === 'EMPLOYEE' && (
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() => navigate(`/admin/employee/${user.user_id}`)}
-                              className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                              className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-7 w-7"
                               title="View Employee Profile"
                             >
-                              <Eye className="h-4 w-4" />
+                              <Eye className="h-3.5 w-3.5" />
                             </Button>
                           )}
 
-                          {/* Toggle Active Status (UserCheck/UserX) */}
+                          {/* Toggle Active Status */}
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => handleToggleActive(user)}
-                            className={user.active ? "text-muted-foreground hover:text-destructive hover:bg-destructive/10" : "text-muted-foreground hover:text-success hover:bg-success/10"}
+                            className={`h-7 w-7 ${user.active ? "text-muted-foreground hover:text-destructive hover:bg-destructive/10" : "text-muted-foreground hover:text-emerald-600 hover:bg-emerald-500/10"}`}
                             title={user.active ? "Deactivate Account" : "Activate Account"}
                           >
-                            {user.active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                            {user.active ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
                           </Button>
                           
-                          {/* Trigger Password Reset (Generates secure token) */}
+                          {/* Trigger Password Reset */}
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => handleTriggerReset(user.email)}
-                            className="text-muted-foreground hover:text-warning hover:bg-warning/10"
+                            className="text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 h-7 w-7"
                             title="Send Password Reset Link"
                           >
-                            <Key className="h-4 w-4" />
+                            <Key className="h-3.5 w-3.5" />
                           </Button>
                           
                           {/* Delete Account Permanently */}
@@ -333,10 +363,10 @@ export const AdminUserManagement: React.FC = () => {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleDeleteUser(user.user_id)}
-                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-7 w-7"
                             title="Delete Account"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </td>
                       </tr>
@@ -347,7 +377,10 @@ export const AdminUserManagement: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
       </div>
     </div>
   );
 };
+
+export default AdminUserManagement;

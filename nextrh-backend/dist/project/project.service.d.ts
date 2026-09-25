@@ -14,11 +14,9 @@ export declare class ProjectService {
         id: number;
         name: string;
         client: string;
-        role: string;
         description: string;
         startDate: Date;
         endDate: Date;
-        technologies: string[];
     }[]>;
     createBulkFromParsedData(projectsData: any[], userId: number, cvEntity?: Cv): Promise<Project[]>;
     private mapYearToDates;

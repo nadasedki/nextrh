@@ -1,5 +1,3 @@
-// src/rag/retrieval/retrieval.service.ts
-
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { VectorService } from '../vector/vector.service';
@@ -11,9 +9,7 @@ import { VectorSearchResult } from '../types/rag-types';
 export class RetrievalService {
   private readonly logger = new Logger(RetrievalService.name);
 
-  // how many candidates to fetch from Qdrant before reranking
-  // over-fetching gives the reranker more to work with
-  private readonly topK: number;
+ private readonly topK: number;
 
   constructor(
     private readonly vector: VectorService,
@@ -27,9 +23,6 @@ export class RetrievalService {
 
   async retrieve(question: string): Promise<VectorSearchResult[]> {
 
-    // step 1 — preprocess the query
-    // expands acronyms and removes stop-words before embedding
-    // so the embedding model gets a cleaner, more informative input
     const { cleaned, expandedTerms } = this.preprocessor.preprocess(question);
 
     this.logger.debug(`Original query:     "${question}"`);
@@ -38,18 +31,9 @@ export class RetrievalService {
       this.logger.debug(`Expanded terms: [${expandedTerms.join(', ')}]`);
     }
 
-    // step 2 — embed the preprocessed query
-    const qVec = await this.embed.embed(cleaned);
-    // const qVec = await this.embed.embed(question);
-    // step 3 — vector search in Qdrant
-    const raw = await this.vector.search(qVec, this.topK);
+   const qVec = await this.embed.embed(cleaned);
+     const raw = await this.vector.search(qVec, this.topK);
 
-    // step 4 — map raw Qdrant results to our typed interface
-    // Qdrant types payload as Record<string, unknown> so we extract
-    // each field individually rather than casting the whole object
-    // Inside src/rag/retrieval/retrieval.service.ts -> retrieve()
-
-    // step 4 — map raw Qdrant results to our typed interface [1]
     const results: VectorSearchResult[] = raw.map(hit => ({
       id: Number(hit.id),
       score: hit.score,

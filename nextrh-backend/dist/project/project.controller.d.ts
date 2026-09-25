@@ -8,11 +8,9 @@ export declare class ProjectsController {
         id: number;
         name: string;
         client: string;
-        role: string;
         description: string;
         startDate: Date;
         endDate: Date;
-        technologies: string[];
     }[]>;
     update(id: number, req: any, updateDto: any): Promise<any>;
     remove(id: number, req: any): Promise<void>;

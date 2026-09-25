@@ -150,11 +150,11 @@ async updateYearsOfExperience(userId: number, years: number) {
     //  Count active users 
     const totalUsers = await this.userRepo.count({ where: { active: true } });
 
-    // B. Count teams 
+    //  Count teams 
     const teamCountResult = await this.dataSource.query('SELECT COUNT(*) as count FROM teams');
     const totalTeams = parseInt(teamCountResult[0]?.count || '0', 10);
 
-    // C. Count certifications
+    // Count certifications
     const certCountResult = await this.dataSource.query('SELECT COUNT(*) as count FROM certifications');
     const totalCerts = parseInt(certCountResult[0]?.count || '0', 10);
 

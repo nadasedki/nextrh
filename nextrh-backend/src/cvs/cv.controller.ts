@@ -1,70 +1,89 @@
-import { Controller, Post, Body, UseGuards, Req, UploadedFile, UseInterceptors, BadRequestException, Logger, InternalServerErrorException, Delete, Param } from '@nestjs/common';
-import { CvService } from './cv.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+// src/cvs/cv.controller.ts
+import { 
+  Controller, 
+  Post, 
+  Get, 
+  Delete, 
+  Param, 
+  Req, 
+  UseGuards, 
+  UploadedFile, 
+  UseInterceptors, 
+  BadRequestException, 
+  HttpStatus, 
+  HttpCode 
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { CvImportService } from './cv-import/cv-import.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CvService } from './cv.service';
 
 @Controller('cvs')
 export class CvController {
-  private readonly logger = new Logger(CvController.name);
-  constructor(private readonly cvService: CvService,
-    private readonly cvImportService: CvImportService
-  ) {}
+  constructor(private readonly cvService: CvService) {}
 
- @UseGuards(JwtAuthGuard)
+  /**
+   * POST /cvs/upload
+   * Receives PDF file and delegates saving + queueing to CvService
+   */
+  @UseGuards(JwtAuthGuard)
   @Post('upload')
+  @HttpCode(HttpStatus.ACCEPTED) // Returns 202 Accepted
   @UseInterceptors(FileInterceptor('file'))
   async uploadCv(@Req() req, @UploadedFile() file: Express.Multer.File) {
-    // 2. Guard Clause: Verify that a file was actually uploaded
+    // 1. Guard Clause: Verify file was uploaded
     if (!file) {
       throw new BadRequestException('Aucun fichier n\'a été fourni. Veuillez téléverser un CV au format PDF.');
     }
 
-    // 3. Guard Clause:  check for PDF mimetype
+    // 2. Guard Clause: Verify PDF mimetype
     if (file.mimetype !== 'application/pdf') {
-      this.logger.warn(`Unsupported upload attempt with mimetype: ${file.mimetype}`);
-      throw new BadRequestException('Type de fichier non supporté. Seurs les fichiers PDF sont acceptés.');
+      throw new BadRequestException('Type de fichier non supporté. Seuls les fichiers PDF sont acceptés.');
     }
 
-    try {
-      // 4. Retrieve from the JWT Auth Payload
-      const userId = req.user.userId; 
-      this.logger.log(`Initiating parsing pipeline for user ${userId} with file: ${file.originalname}`);
-
-      // 5. Delegate processing to the internal pipeline orchestrator
-      // We pass the memory buffer directly instead of file.path to avoid cross-platform filesystem lock errors
-      const result = await this.cvImportService.uploadAndSaveCv(file.buffer, userId, file.originalname);
-
-      return result;
-    } catch (error) {
-      this.logger.error(`Critical failure in upload execution trace: ${error.message}`);
-      throw new InternalServerErrorException(
-        `Une erreur est survenue lors du traitement automatisé de votre CV : ${error.message}`
-      );
+    const userId = req.user?.userId || req.user?.id || req.user?.sub;
+    if (!userId) {
+      throw new BadRequestException('Utilisateur non authentifié.');
     }
-  }
-@UseGuards(JwtAuthGuard)
-@Delete(':cvId')
-async removeCv(
-  @Param('cvId') cvId: string,
-  @Req() req,
-): Promise<{ message: string }> {
-  const userId = req.user.userId;
 
-  const cvIdNumber = Number(cvId);
-
-  if (!Number.isInteger(cvIdNumber) || cvIdNumber <= 0) {
-    throw new BadRequestException('Identifiant du CV invalide.');
+    // 3. Delegate to service (Saves file to disk + pushes job to BullMQ Redis queue)
+    return await this.cvService.enqueueCvUpload(userId, file);
   }
 
-  this.logger.log(
-    `Deleting CV ${cvIdNumber} for user ${userId}`,
-  );
+  /**
+   * GET /cvs/status/:jobId
+   * Allows the frontend polling loop to check job progress (waiting, active, completed, failed)
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('status/:jobId')
+  async getJobStatus(@Param('jobId') jobId: string) {
+    if (!jobId) {
+      throw new BadRequestException('Identifiant de tâche (jobId) manquant.');
+    }
 
-  await this.cvService.remove(cvIdNumber, userId);
+    return await this.cvService.getJobStatus(jobId);
+  }
 
-  return {
-    message: 'CV supprimé avec succès.',
-  };
-}
+  /**
+   * DELETE /cvs/:cvId
+   * Cascade deletes CV records from PostgreSQL and unlinks physical file from disk
+   */
+  @UseGuards(JwtAuthGuard)
+  @Delete(':cvId')
+  async removeCv(
+    @Param('cvId') cvId: string,
+    @Req() req,
+  ): Promise<{ message: string }> {
+    const userId = req.user?.userId || req.user?.id || req.user?.sub;
+    const cvIdNumber = Number(cvId);
+
+    if (!Number.isInteger(cvIdNumber) || cvIdNumber <= 0) {
+      throw new BadRequestException('Identifiant du CV invalide.');
+    }
+
+    await this.cvService.remove(cvIdNumber, userId);
+
+    return {
+      message: 'CV supprimé avec succès.',
+    };
+  }
 }

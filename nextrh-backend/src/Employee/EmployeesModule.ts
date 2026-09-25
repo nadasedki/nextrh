@@ -15,8 +15,6 @@ import { ProjectModule } from 'src/project/project.module';
 import { TrainingModule } from 'src/training/training.module';
 import { EducationModule } from 'src/education/education.module';
 import { CertificationsModule } from 'src/certifications/certifications.module';
-// If you have a shared AuthModule, import it here for guards
-// import { AuthModule } from '../auth/auth.module';
 import { Experience } from 'src/experience/entities/experience.entity';
 import { CvModule } from 'src/cvs/cv.module';
 import { EmployeeProfileService } from './employeeProfile.service';

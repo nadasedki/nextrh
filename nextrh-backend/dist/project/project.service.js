@@ -55,11 +55,9 @@ let ProjectService = class ProjectService {
             id: p.id,
             name: p.name,
             client: p.client,
-            role: p.role,
             description: p.description,
             startDate: p.start_date,
             endDate: p.end_date,
-            technologies: p.technologies || [],
         }));
     }
     async createBulkFromParsedData(projectsData, userId, cvEntity) {
@@ -74,8 +72,6 @@ let ProjectService = class ProjectService {
                 description: proj.description,
                 start_date: startDate,
                 end_date: endDate,
-                role: proj.role || '',
-                technologies: proj.technologies || [],
                 cv: cvEntity,
             });
         });

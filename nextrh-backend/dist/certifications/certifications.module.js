@@ -18,16 +18,28 @@ const google_calendar_module_1 = require("../google-calendar/google-calendar.mod
 const scoring_module_1 = require("../scoring/scoring.module");
 const CertificationsListener_1 = require("./CertificationsListener");
 const certifications_extraction_service_1 = require("./services/certifications-extraction.service");
+const cert_parsing_processor_1 = require("./processors/cert-parsing.processor");
+const bullmq_1 = require("@nestjs/bullmq");
+const nestjs_1 = require("@bull-board/nestjs");
+const bullMQAdapter_1 = require("@bull-board/api/bullMQAdapter");
 let CertificationsModule = class CertificationsModule {
 };
 exports.CertificationsModule = CertificationsModule;
 exports.CertificationsModule = CertificationsModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([certification_entity_1.Certification, user_entity_1.User]), parser_module_1.ParserModule, google_calendar_module_1.GoogleCalendarModule, scoring_module_1.ScoringModule],
+        imports: [typeorm_1.TypeOrmModule.forFeature([certification_entity_1.Certification, user_entity_1.User]), bullmq_1.BullModule.registerQueue({
+                name: 'cert-parsing',
+            }), nestjs_1.BullBoardModule.forFeature({
+                name: 'cert-parsing',
+                adapter: bullMQAdapter_1.BullMQAdapter,
+            }),
+            parser_module_1.ParserModule, google_calendar_module_1.GoogleCalendarModule, scoring_module_1.ScoringModule],
         controllers: [certifications_controller_1.CertificationsController],
         providers: [certifications_service_1.CertificationsService,
             CertificationsListener_1.CertificationsListener,
-            certifications_extraction_service_1.CertificationsParserService],
+            certifications_extraction_service_1.CertificationsParserService,
+            cert_parsing_processor_1.CertParsingProcessor
+        ],
         exports: [certifications_service_1.CertificationsService],
     })
 ], CertificationsModule);

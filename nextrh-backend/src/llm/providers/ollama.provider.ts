@@ -7,14 +7,13 @@ export class OllamaProvider implements ILlmEngine {
   private readonly logger = new Logger(OllamaProvider.name);
   private readonly model: ChatOllama;
 
-// src/llm/providers/ollama.provider.ts
+
 
   constructor(private readonly configService: ConfigService) {
     const baseUrl = this.configService.get<string>('OLLAMA_BASE_URL', 'http://127.0.0.1:11434');
     const modelName = this.configService.get<string>('OLLAMA_MODEL', 'qwen2.5:7b');
 
-    // FIX: Force explicit number conversions to prevent string-to-number leaks
-    const temperature = Number(this.configService.get('OLLAMA_TEMPERATURE') ?? 0);
+     const temperature = Number(this.configService.get('OLLAMA_TEMPERATURE') ?? 0);
     const numCtx = Number(this.configService.get('OLLAMA_NUM_CTX') ?? 16384);
     const numPredict = Number(this.configService.get('OLLAMA_NUM_PREDICT') ?? 2048);
 
@@ -31,15 +30,12 @@ export class OllamaProvider implements ILlmEngine {
     );
   }
 
-   /**
-   * Helper to build a model instance, dynamically applying any caller-provided overrides [2]
-   */
+ 
   private getModelInstance(options?: LlmOptions): ChatOllama {
     if (!options) {
-      return this.model; // Fallback to default .env config [1]
+      return this.model; 
     }
 
-    // Return a temporary model with overridden options [2]
     return new ChatOllama({
       baseUrl: this.configService.get<string>('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
       model: options.model || this.configService.get<string>('OLLAMA_CV_MODEL', 'qwen2.5:7b'),

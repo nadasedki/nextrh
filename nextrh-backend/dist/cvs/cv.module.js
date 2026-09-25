@@ -13,19 +13,30 @@ const cv_service_1 = require("./cv.service");
 const typeorm_1 = require("@nestjs/typeorm");
 const cv_entity_1 = require("./entities/cv.entity");
 const education_module_1 = require("../education/education.module");
-const cv_import_service_1 = require("./cv-import/cv-import.service");
+const cv_ingestion_service_1 = require("./cv-ingestion.service");
 const cv_parser_module_1 = require("../cv-parser/cv-parser.module");
 const certifications_module_1 = require("../certifications/certifications.module");
 const project_module_1 = require("../project/project.module");
 const users_module_1 = require("../users/users.module");
 const experience_module_1 = require("../experience/experience.module");
 const scoring_module_1 = require("../scoring/scoring.module");
+const cv_queue_processor_1 = require("./processors/cv-queue.processor");
+const bullmq_1 = require("@nestjs/bullmq");
+const nestjs_1 = require("@bull-board/nestjs");
+const bullMQAdapter_1 = require("@bull-board/api/bullMQAdapter");
 let CvModule = class CvModule {
 };
 exports.CvModule = CvModule;
 exports.CvModule = CvModule = __decorate([
     (0, common_1.Module)({
         imports: [
+            bullmq_1.BullModule.registerQueue({
+                name: 'cv-parsing',
+            }),
+            nestjs_1.BullBoardModule.forFeature({
+                name: 'cv-parsing',
+                adapter: bullMQAdapter_1.BullMQAdapter,
+            }),
             typeorm_1.TypeOrmModule.forFeature([cv_entity_1.Cv]),
             education_module_1.EducationModule,
             certifications_module_1.CertificationsModule,
@@ -33,10 +44,10 @@ exports.CvModule = CvModule = __decorate([
             users_module_1.UsersModule,
             experience_module_1.ExperienceModule,
             scoring_module_1.ScoringModule,
-            cv_parser_module_1.CvParserModule
+            cv_parser_module_1.CvParserModule,
         ],
         controllers: [cv_controller_1.CvController],
-        providers: [cv_service_1.CvService, cv_import_service_1.CvImportService],
+        providers: [cv_service_1.CvService, cv_ingestion_service_1.CvIngestionService, cv_queue_processor_1.CvQueueProcessor],
         exports: [cv_service_1.CvService],
     })
 ], CvModule);

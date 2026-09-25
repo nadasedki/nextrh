@@ -11,8 +11,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 @Controller('evaluation')
-//@UseGuards(JwtAuthGuard, RolesGuard)
-//@Roles('ADMIN')
+
 export class EvaluationController {
   private readonly logger = new Logger(EvaluationController.name);
 

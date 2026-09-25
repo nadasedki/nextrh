@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react'; // ◄ Added useRef
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { UploadProgress } from '@/components/common';
@@ -21,9 +21,18 @@ const CVUploadPage: React.FC = () => {
   const [file, setFile] = useState<UploadedFileInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // ◄ Refs to track background tasks across renders
+  // Refs to track background timers and abort controllers
   const abortControllerRef = useRef<AbortController | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null); // 👈 Polling ref
+
+  // Clean up all timers if component unmounts
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, []);
 
   const handleUpload = useCallback(async (uploadedFile: File) => {
     setFile({
@@ -38,24 +47,25 @@ const CVUploadPage: React.FC = () => {
     const formData = new FormData();
     formData.append('file', uploadedFile);
 
-    // ◄ Instantiate a new controller for this specific request
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
     try {
       const token = localStorage.getItem('token');
       
+      // Simulate file upload progress (0 to 90%)
       intervalRef.current = setInterval(() => {
         setProgress(prev => (prev < 90 ? prev + 5 : prev));
       }, 200);
 
+      // 1. Send upload request to NestJS backend
       const response = await fetch('http://localhost:3000/cvs/upload', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
         },
         body: formData,
-        signal: controller.signal, // ◄ Attach the cancellation anchor here
+        signal: controller.signal,
       });
 
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -65,42 +75,74 @@ const CVUploadPage: React.FC = () => {
         throw new Error(errorData.message || 'Failed to upload CV');
       }
 
+      const uploadResult = await response.json();
+      const jobId = uploadResult.jobId;
+
+      // 2. Upload to server finished -> now AI parsing starts in BullMQ
       setProgress(100);
       setUploadStatus('parsing');
 
-      setTimeout(() => {
-        setUploadStatus('completed');
-      }, 1500);
+      // 3.  REAL POLLING: Check job status every 1.5 seconds until BullMQ finishes
+   // In CVUploadPage.tsx inside handleUpload
+      pollIntervalRef.current = setInterval(async () => {
+        try {
+          const statusRes = await fetch(`http://localhost:3000/cvs/status/${jobId}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
 
+          if (!statusRes.ok) return;
+
+          const jobStatus = await statusRes.json();
+          console.log('BullMQ Job Status:', jobStatus); // 👈 Helpful debug log
+
+          // If Completed
+          if (jobStatus.state === 'completed' || jobStatus.status === 'completed') {
+            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+            setUploadStatus('completed');
+          } 
+          // If Failed
+          else if (jobStatus.state === 'failed' || jobStatus.status === 'failed') {
+            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+            setError(jobStatus.failedReason || 'AI parsing failed. Please check the document.');
+            setUploadStatus('error');
+          }
+        } catch (pollErr) {
+          console.warn('Polling check failed:', pollErr);
+        }
+      }, 1500);
     } catch (err: any) {
-      // ◄ Ignore updating the error UI if it was canceled intentionally
       if (err.name === 'AbortError') {
         console.log('Upload request aborted by user.');
         return;
       }
       
       if (intervalRef.current) clearInterval(intervalRef.current);
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       console.error('Upload error:', err);
       setError(err.message || 'An error occurred during upload');
       setUploadStatus('error');
     }
   }, []);
 
-  // ◄ Enriched Reset Action
+  // Safe Cancel & Reset Action
   const handleCancelAndReset = () => {
-    // 1. Cancel the HTTP request immediately
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
 
-    // 2. Kill the progress UI interval loop
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
 
-    // 3. Revert states back to pristine clean values
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+
     setFile(null);
     setUploadStatus('idle');
     setProgress(0);
@@ -160,7 +202,7 @@ const CVUploadPage: React.FC = () => {
       case 'uploading':
         return 'Uploading your CV to server...';
       case 'parsing':
-        return 'Analyzing and extracting sections...';
+        return 'AI is analyzing and extracting CV sections...';
       case 'completed':
         return 'CV uploaded and parsed successfully!';
       case 'error':
@@ -174,7 +216,7 @@ const CVUploadPage: React.FC = () => {
     <div className="space-y-6 max-w-3xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Upload CV</h1>
-        <p className="text-muted-foreground">Automatically update your profile info via CV parsing</p>
+        <p className="text-muted-foreground">Automatically update your profile info via AI CV parsing</p>
       </div>
 
       <Card>
@@ -264,7 +306,7 @@ const CVUploadPage: React.FC = () => {
                 {uploadStatus === 'parsing' && (
                   <div className="flex items-center justify-center gap-2 py-4">
                     <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                    <span className="text-sm text-muted-foreground">Extracting Data...</span>
+                    <span className="text-sm text-muted-foreground">Extracting Data with AI...</span>
                   </div>
                 )}
 
@@ -341,7 +383,6 @@ const CVUploadPage: React.FC = () => {
                     </Button>
                   </>
                 ) : (
-                  // ◄ Hooked to the safe cancellation function
                   <Button variant="outline" onClick={handleCancelAndReset}>Cancel</Button>
                 )}
               </div>

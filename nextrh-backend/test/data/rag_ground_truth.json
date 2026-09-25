@@ -5,6 +5,101 @@
       "category": "project_query",
       "expected_doc_ids": ["2_projects"],
       "expected_answer": "Jazil Gafsi"
+    },
+    { 
+      "query": "Find a network engineer certified in CCNP Routing & Switching who has past project experience with our client STEG.",
+      "category": "composite_client_cert_query",
+      "expected_doc_ids": ["1_credentials", "1_projects"],
+      "expected_answer": "Aya Ben Jemaa"
+    },
+    {
+  "query": "Find me a network security expert with proven experience in firewalls and Sophos architectures.",
+  "category": "expert_experience_query",
+  "expected_doc_ids": ["3_credentials"],
+  "expected_answer": "Anouar ABDALLAH"
+},
+{
+      "query": "Which DevOps engineer has experience containerizing legacy applications with Docker for SNCFT?",
+      "category": "project_query",
+      "expected_doc_ids": ["20_projects","20_profile", "20_credentials"],
+      "expected_answer": "Mohamed AMRI"
+    },
+     {
+      "query": "Do we have any experts in Solidity smart contracts or blockchain development?",
+      "category": "negative_query",
+      "expected_doc_ids": [],
+      "expected_answer": "No candidate satisfies all criteria."
+    },{
+      "query": "Quelles sont les compétences et expériences de Mohamed AMRI dans le domaine du Cloud (AWS et Azure) ?",
+      "category": "cross_lingual_query",
+      "expected_doc_ids": ["20_profile", "20_projects", "20_credentials"],
+      "expected_answer": "Mohamed AMRI: Ingénieur DevOps & Cloud. Compétences: AWS, Azure. Projet: Migration cloud hybride AWS pour STEG. Certification: AWS Certified Solutions Architect (2023)."
+     },
+    {
+      "query": "Who on our team is a certified data engineer with experience building financial ETL pipelines or processing real-time big data traffic?",
+      "category": "expert_experience_query",
+      "expected_doc_ids": ["18_projects", "18_credentials"],
+      "expected_answer": "Yassine BEN HASSINE"
+    },
+   {
+      "query": "Identify our backend developers certified in Java and Spring Boot who have hands-on experience building core banking APIs or microservices.",
+      "category": "skills_query",
+      "expected_doc_ids": ["19_projects", "19_credentials"],
+      "expected_answer": "Oussama BELHAJ"
+    },
+    {
+      "query": "Do we have a contract manager experienced in coordinating major multi-site infrastructure upgrades or IT delivery contracts?",
+      "category": "fit_assessment_query",
+      "expected_doc_ids": ["4_profile", "4_projects"],
+      "expected_answer": "Amal KHALFAOUI"
+    },
+   {
+      "query": "Which of our database-skilled engineers or developers holds a certified developer credential specifically for MongoDB?",
+      "category": "comparative_query",
+      "expected_doc_ids": ["19_credentials", "17_credentials"], 
+      "expected_answer": "Oussama BELHAJ, Sami BEN YOUSSEF" 
+    },
+    {
+      "query": "A client needs a cybersecurity expert to lead an enterprise firewall infrastructure audit. Compare our qualified profiles and recommend who is best suited to lead.",
+      "category": "comparative_query",
+      "expected_doc_ids": ["3_profile", "1_profile", "22_profile"],
+      "expected_answer": "Anouar ABDALLAH" 
+    },
+    {
+      "query": "Which engineer has completed the official Certified Kubernetes Administrator (CKA) training program?",
+      "category": "training_query",
+      "expected_doc_ids": ["20_credentials"],
+      "expected_answer": "Mohamed AMRI"
+    },
+    {
+      "query": "Who has completed the specialized Cisco DevNet Associate training course?",
+      "category": "training_query",
+      "expected_doc_ids": ["1_credentials"],
+      "expected_answer": "Aya Ben Jemaa"
+    },
+    {
+  "query": "We are bidding on a major cloud migration tender requiring hybrid AWS architecture and CI/CD automation. Evaluate our team and write a professional justification for the best candidate.",
+  "category": "fit_assessment_query",
+  "expected_doc_ids": ["20_credentials", "20_projects", "20_profile"],
+  "expected_answer": "Mohamed AMRI"
+},
+{
+      "query": "Find a React.js frontend developer certified by Meta or Google who can lead a responsive web redesign project.",
+      "category": "fit_assessment_query",
+      "expected_doc_ids": ["21_projects", "21_credentials"], 
+      "expected_answer": "Mariem GHARBI"
+    },
+    {
+      "query": "We have a proposal for a banking client requiring a full-stack platform built with Angular on the front-end and Spring Boot microservices on the back-end. Who is our best fit and how does their background justify this?",
+      "category": "fit_assessment_query",
+      "expected_doc_ids": ["17_profile", "17_projects", "17_credentials"],
+      "expected_answer": "Sami BEN YOUSSEF"
+    },{
+      "query": "We need a certified Java expert to design a high-throughput REST API with microservices architecture and messaging queues. Evaluate our backend developers and recommend the top candidate.",
+      "category": "fit_assessment_query",
+      "expected_doc_ids": ["19_profile", "19_projects", "19_credentials"],
+      "expected_answer": "Oussama BELHAJ"
     }
+
   ]
 }

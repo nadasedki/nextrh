@@ -93,47 +93,46 @@ const BIDDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* ============================
-          STYLED STATS GRID
+     {/* ============================
+          STYLED STATS GRID (3 Cards)
       ============================ */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+        {/* Total Employees */}
         <Card className="border-l-4 border-l-primary shadow-sm hover:bg-muted/50 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3 px-4">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Employees</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">
+              Total Employees
+            </CardTitle>
             <Users className="h-4 w-4 text-primary opacity-70" />
           </CardHeader>
           <CardContent className="px-4 pb-3">
-            <div className="text-2xl font-bold">{stats?.totalEmployees}</div>
+            <div className="text-2xl font-bold">{stats?.totalEmployees || 0}</div>
           </CardContent>
         </Card>
 
+        {/* Total Certifications */}
         <Card className="border-l-4 border-l-success shadow-sm hover:bg-muted/50 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3 px-4">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Certs</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">
+              Total Certs
+            </CardTitle>
             <Award className="h-4 w-4 text-success opacity-70" />
           </CardHeader>
           <CardContent className="px-4 pb-3">
-            <div className="text-2xl font-bold">{stats?.totalCertifications}</div>
+            <div className="text-2xl font-bold">{stats?.totalCertifications || 0}</div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-warning shadow-sm hover:bg-muted/50 transition-colors">
-          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3 px-4">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">Expiring Month</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-warning opacity-70" />
-          </CardHeader>
-          <CardContent className="px-4 pb-3">
-            <div className="text-2xl font-bold text-warning">{stats?.expiringThisMonth}</div>
-          </CardContent>
-        </Card>
-
+        {/* Total Teams */}
         <Card className="border-l-4 border-l-accent shadow-sm hover:bg-muted/50 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between pb-1 pt-3 px-4">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">Teams</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">
+              Teams
+            </CardTitle>
             <Building2 className="h-4 w-4 text-accent opacity-70" />
           </CardHeader>
           <CardContent className="px-4 pb-3">
-            <div className="text-2xl font-bold">{stats?.totalTeams}</div>
+            <div className="text-2xl font-bold">{stats?.totalTeams || 0}</div>
           </CardContent>
         </Card>
       </div>

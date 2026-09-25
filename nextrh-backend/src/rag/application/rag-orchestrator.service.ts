@@ -1,5 +1,3 @@
-// src/rag/application/rag-orchestrator.service.ts
-
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { RagPipelineService } from './rag-pipeline.service';
 import { RagResponse, SourceReference } from '../types/rag-types';
@@ -31,17 +29,14 @@ export class RagOrchestratorService {
       score:     r.score,
     }));
 
-    // use structured fields if available, fall back to raw answer string
     const structured = state.structuredAnswer;
 
     return {
-      // structured fields exposed individually for frontend consumption
       answer:      structured?.answer      ?? state.answer ?? '',
       reasoning:   structured?.reasoning ?? '',
       explanation: structured?.explanation ?? '',
       confidence:  structured?.confidence  ?? 0,
       llmSources:  structured?.sources     ?? [],
-      // retrieval sources from Qdrant
       sources,
       metrics: state.metadata,
     };

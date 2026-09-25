@@ -13,7 +13,7 @@ export interface ExtractedCertificate {
 }
 @Injectable()
 export class LlmService {
- // private model;
+
 private readonly logger = new Logger(LlmService.name);
 constructor(
     @Inject(LLM_ENGINE) private readonly llmEngine: ILlmEngine,

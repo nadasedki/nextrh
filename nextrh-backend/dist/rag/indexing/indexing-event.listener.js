@@ -23,7 +23,7 @@ let IndexingEventListener = IndexingEventListener_1 = class IndexingEventListene
         await this.handle('cv.saved', payload);
     }
     async handleCvDeleted(payload) {
-        await this.handle('cv.deleted', payload);
+        await this.handle('cv.deleted', payload, true);
     }
     async handleCertificationSaved(payload) {
         await this.handle('certification.index_saved', payload);
@@ -55,26 +55,23 @@ let IndexingEventListener = IndexingEventListener_1 = class IndexingEventListene
     async handleTrainingDeleted(payload) {
         await this.handle('training.deleted', payload);
     }
-    async handle(eventName, payload) {
-        if (!payload?.userId || !payload?.entityId) {
+    async handle(eventName, payload, isFullDeletion = false) {
+        if (!payload?.userId) {
             this.logger.error(`${eventName} received malformed payload: ${JSON.stringify(payload)}`);
             return;
         }
-        this.logger.log(`${eventName} — entity #${payload.entityId}, user #${payload.userId}`);
         try {
-            const result = await this.indexingService.reindexUser(payload.userId);
-            if (result.status === 'error') {
-                this.logger.error(`Re-index failed after ${eventName} for user #${payload.userId}: ${result.error}`);
-            }
-            else if (result.status === 'no_profile') {
-                this.logger.warn(`No profile found for user #${payload.userId} — skipping re-index`);
+            if (isFullDeletion) {
+                this.logger.log(`${eventName} — Enqueueing vector cleanup for User #${payload.userId}`);
+                await this.indexingService.enqueueUserDeletion(payload.userId);
             }
             else {
-                this.logger.log(`Re-index complete after ${eventName} for user #${payload.userId} (${result.points} vectors)`);
+                this.logger.log(`${eventName} — Enqueueing vector re-indexing for User #${payload.userId}`);
+                await this.indexingService.enqueueUserIndexing(payload.userId);
             }
         }
         catch (err) {
-            this.logger.error(`Unexpected error in ${eventName} handler for user #${payload.userId}: ${err.message}`);
+            this.logger.error(`Failed to enqueue vector job for ${eventName} (User #${payload.userId}): ${err.message}`);
         }
     }
 };

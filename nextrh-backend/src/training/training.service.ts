@@ -1,4 +1,3 @@
-// src/training/training.service.ts
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -7,8 +6,7 @@ import { CreateTrainingDto } from './dto/create-training.dto';
 import { User } from '../users/entities/user.entity';
 import { UpdateTrainingDto } from './dto/update-training.dto';
 import { ScoringService } from 'src/scoring/scoring.service';
-import { EventEmitter2 } from '@nestjs/event-emitter'; // 1. Import EventEmitter2
-
+import { EventEmitter2 } from '@nestjs/event-emitter'; 
 @Injectable()
 export class TrainingService {
   constructor(
@@ -17,7 +15,7 @@ export class TrainingService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private readonly scoringService: ScoringService, 
-    private readonly eventEmitter: EventEmitter2, // 2. Inject EventEmitter2 in constructor
+    private readonly eventEmitter: EventEmitter2, 
   ) {}
 
   async create(userId: number, createDto: CreateTrainingDto) {
@@ -36,10 +34,9 @@ export class TrainingService {
 
     const savedTraining = await this.trainingRepository.save(training);
 
-    // MISE À JOUR DU SCORE ICI
+    
     await this.scoringService.calculateAndSaveScore(userId);
 
-    // 3. Emit training.saved event on creation [1]
     this.eventEmitter.emit('training.saved', {
       entityId: savedTraining.training_id,
       userId,
@@ -73,8 +70,7 @@ export class TrainingService {
     Object.assign(training, updateDto);
     const savedTraining = await this.trainingRepository.save(training);
 
-    // 4. Emit training.saved event on update [1]
-    this.eventEmitter.emit('training.saved', {
+   this.eventEmitter.emit('training.saved', {
       entityId: trainingId,
       userId,
     });
@@ -96,10 +92,8 @@ export class TrainingService {
 
     await this.trainingRepository.remove(training);
 
-    // MISE À JOUR DU SCORE ICI
     await this.scoringService.calculateAndSaveScore(userId);
 
-    // 5. Emit training.deleted event on removal [1]
     this.eventEmitter.emit('training.deleted', {
       entityId: trainingId,
       userId,

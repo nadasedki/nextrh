@@ -1,5 +1,3 @@
-// src/rag/indexing/indexing-event.listener.ts
-
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { IndexingService } from './indexing.service';
@@ -13,18 +11,19 @@ export class IndexingEventListener {
 
   constructor(private readonly indexingService: IndexingService) {}
 
-  // ─── CVS & PROFILES (Added to handle core CV integrations) ─────────────────
+  // ─── CVS & PROFILES ────────────────────────────────────────────────────────
 
-  @OnEvent('cv.saved') // ◄ Listens to CV creation/import updates [1]
+  @OnEvent('cv.saved')
   async handleCvSaved(payload: EntitySavedPayload) {
     await this.handle('cv.saved', payload);
   }
 
-  @OnEvent('cv.deleted') // ◄ Listens to CV deletion/wipe updates [1]
+  @OnEvent('cv.deleted')
   async handleCvDeleted(payload: EntityDeletedPayload) {
-    await this.handle('cv.deleted', payload);
-  }
-  // ─── CERTIFICATIONS ─────────────────────────────────────────────────────────
+    await this.handle('cv.deleted', payload, true); 
+    }
+
+  // ─── CERTIFICATIONS ────────────────────────────────────────────────────────
 
   @OnEvent('certification.index_saved')
   async handleCertificationSaved(payload: EntitySavedPayload) {
@@ -36,7 +35,7 @@ export class IndexingEventListener {
     await this.handle('certification.index_deleted', payload);
   }
 
-  // ─── EDUCATION ──────────────────────────────────────────────────────────────
+  // ─── EDUCATION ─────────────────────────────────────────────────────────────
 
   @OnEvent('education.saved')
   async handleEducationSaved(payload: EntitySavedPayload) {
@@ -48,7 +47,7 @@ export class IndexingEventListener {
     await this.handle('education.deleted', payload);
   }
 
-  // ─── PROJECTS ───────────────────────────────────────────────────────────────
+  // ─── PROJECTS ──────────────────────────────────────────────────────────────
 
   @OnEvent('project.saved')
   async handleProjectSaved(payload: EntitySavedPayload) {
@@ -60,7 +59,7 @@ export class IndexingEventListener {
     await this.handle('project.deleted', payload);
   }
 
-  // ─── EXPERIENCES ────────────────────────────────────────────────────────────
+  // ─── EXPERIENCES ───────────────────────────────────────────────────────────
 
   @OnEvent('experience.saved')
   async handleExperienceSaved(payload: EntitySavedPayload) {
@@ -72,7 +71,7 @@ export class IndexingEventListener {
     await this.handle('experience.deleted', payload);
   }
 
-  // ─── TRAININGS ──────────────────────────────────────────────────────────────
+  // ─── TRAININGS ─────────────────────────────────────────────────────────────
 
   @OnEvent('training.saved')
   async handleTrainingSaved(payload: EntitySavedPayload) {
@@ -84,46 +83,31 @@ export class IndexingEventListener {
     await this.handle('training.deleted', payload);
   }
 
-  // ─── SHARED HANDLER ─────────────────────────────────────────────────────────
+  // ─── SHARED ASYNCHRONOUS HANDLER ───────────────────────────────────────────
 
-  // all events funnel through here — validation, logging, error isolation
-  // event handlers must never throw — they are side effects of business operations
   private async handle(
     eventName: string,
     payload: EntitySavedPayload | EntityDeletedPayload,
+    isFullDeletion = false,
   ): Promise<void> {
-    // validate payload before touching the service
-    if (!payload?.userId || !payload?.entityId) {
-      this.logger.error(
-        `${eventName} received malformed payload: ${JSON.stringify(payload)}`,
-      );
+    if (!payload?.userId) {
+      this.logger.error(`${eventName} received malformed payload: ${JSON.stringify(payload)}`);
       return;
     }
 
-    this.logger.log(
-      `${eventName} — entity #${payload.entityId}, user #${payload.userId}`,
-    );
-
     try {
-      const result = await this.indexingService.reindexUser(payload.userId);
-
-      if (result.status === 'error') {
-        this.logger.error(
-          `Re-index failed after ${eventName} for user #${payload.userId}: ${result.error}`,
-        );
-      } else if (result.status === 'no_profile') {
-        this.logger.warn(
-          `No profile found for user #${payload.userId} — skipping re-index`,
-        );
+      if (isFullDeletion) {
+        // 1. Enqueue complete vector cleanup in BullMQ
+        this.logger.log(`${eventName} — Enqueueing vector cleanup for User #${payload.userId}`);
+        await this.indexingService.enqueueUserDeletion(payload.userId);
       } else {
-        this.logger.log(
-          `Re-index complete after ${eventName} for user #${payload.userId} (${result.points} vectors)`,
-        );
+        // 2. Enqueue background re-indexing in BullMQ (Deduplicated by Redis jobId)
+        this.logger.log(`${eventName} — Enqueueing vector re-indexing for User #${payload.userId}`);
+        await this.indexingService.enqueueUserIndexing(payload.userId);
       }
     } catch (err: any) {
-      // catch-all safety net — should never reach here since reindexUser catches internally
       this.logger.error(
-        `Unexpected error in ${eventName} handler for user #${payload.userId}: ${err.message}`,
+        `Failed to enqueue vector job for ${eventName} (User #${payload.userId}): ${err.message}`,
       );
     }
   }

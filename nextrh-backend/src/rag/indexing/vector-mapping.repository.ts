@@ -1,4 +1,3 @@
-// src/rag/indexing/vector-mapping.repository.ts
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 

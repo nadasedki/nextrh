@@ -3,19 +3,18 @@ import { IsString, IsNotEmpty, IsOptional, IsDateString } from 'class-validator'
 export class CreateCertificationDto {
   @IsNotEmpty()
   @IsString()
-  name: string; // Frontend sends 'name'
+  name: string; 
 
   @IsNotEmpty()
   @IsString()
-  issuer: string; // Frontend sends 'issuer'
+  issuer: string; 
+  @IsOptional()
+  @IsDateString()
+  issueDate?: string; 
 
   @IsOptional()
   @IsDateString()
-  issueDate?: string; // Frontend sends 'issueDate'
-
-  @IsOptional()
-  @IsDateString()
-  expirationDate?: string; // Frontend sends 'expirationDate'
+  expirationDate?: string; 
 
   @IsOptional()
   @IsString()

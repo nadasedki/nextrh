@@ -27,7 +27,7 @@ export interface ParsedCvResponse {
       period: string | null;
       company: string;
       role: string;
-      lowConfidence: boolean;
+     
     }>;
     certifications: Array<{
       certName: string;
@@ -35,19 +35,19 @@ export interface ParsedCvResponse {
       date: string | null;
       issue_date: string | null;
       expiry_date: null;
-      lowConfidence: boolean;
+      
     }>;
     education: Array<{
       year: string | null;
       institution: string;
       degree: string;
-      lowConfidence: boolean;
+      
     }>;
     projects: Array<{
       year: string | null;
       client: string;
       description: string;
-      lowConfidence: boolean;
+      
     }>;
   };
 }
@@ -100,13 +100,12 @@ PDF DOCUMENT:
     const totalMs        = Math.round(performance.now() - globalStart);
 
     this.logger.log(
-      `Gemini multimodal CV parse complete in ${(totalMs / 1000).toFixed(2)}s`,
+      `  CV parse complete in ${(totalMs / 1000).toFixed(2)}s`,
     );
 
     return this.mapToResponse(result, totalMs, Math.round(llmInferenceMs), base64Pdf.length);
   }
 
-  // maps LLM output to the exact same response shape as the heuristic parser
   private mapToResponse(
     result: CvExtractionResult,
     totalMs: number,

@@ -4,17 +4,27 @@ import { CvService } from './cv.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Cv } from './entities/cv.entity';
 import { EducationModule } from '../education/education.module';
-import { CvImportService } from './cv-import/cv-import.service';
+import { CvIngestionService } from './cv-ingestion.service';
 import { CvParserModule } from 'src/cv-parser/cv-parser.module';
 import { CertificationsModule } from 'src/certifications/certifications.module';
 import { ProjectModule } from 'src/project/project.module';
 import { UsersModule } from 'src/users/users.module';
 import { ExperienceModule } from 'src/experience/experience.module';
 import { ScoringModule } from 'src/scoring/scoring.module';
-
+import { CvQueueProcessor } from './processors/cv-queue.processor';
+import { BullModule } from '@nestjs/bullmq';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 
 @Module({
    imports: [
+     BullModule.registerQueue({
+      name: 'cv-parsing',
+    }),
+      BullBoardModule.forFeature({
+      name: 'cv-parsing',
+      adapter: BullMQAdapter,
+    }),
     TypeOrmModule.forFeature([Cv]),
     EducationModule,
     CertificationsModule, 
@@ -22,10 +32,11 @@ import { ScoringModule } from 'src/scoring/scoring.module';
     UsersModule,
     ExperienceModule,
     ScoringModule,
-    CvParserModule
+    CvParserModule,
+    
   ],
   controllers: [CvController],
-  providers: [CvService, CvImportService],
+  providers: [CvService, CvIngestionService,CvQueueProcessor],
   exports: [CvService],
 })
 export class CvModule {}

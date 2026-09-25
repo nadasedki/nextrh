@@ -1,23 +1,53 @@
-import { HttpStatus } from '@nestjs/common';
+import { CvTemplateService } from './services/cv-template.service';
+import { CvGeneratorService } from './services/cv-generator.service';
 import { Response } from 'express';
-import { CvTemplateService } from './cv-template.service';
-import { CvDataFormatterService } from './cv-data-formatter.service';
-import { PdfGeneratorService } from './pdf-generator.service';
 export declare class CvGeneratorController {
     private readonly templateService;
-    private readonly dataFormatter;
-    private readonly pdfGenerator;
-    private readonly logger;
-    constructor(templateService: CvTemplateService, dataFormatter: CvDataFormatterService, pdfGenerator: PdfGeneratorService);
-    uploadTemplate(file: Express.Multer.File, name: string, userIdStr: string): Promise<{
+    private readonly generatorService;
+    constructor(templateService: CvTemplateService, generatorService: CvGeneratorService);
+    uploadTemplate(file: Express.Multer.File, name: string, req: any): Promise<{
+        status: string;
         message: string;
-        templateId: number;
+        jobId: string;
     }>;
-    generateCv(templateIdStr: string, userIdStr: string, res: Response): Promise<Response<any, Record<string, any>>>;
-    getTemplates(): Promise<any[]>;
-    testCandidateData(userIdStr: string): Promise<{
-        statusCode: HttpStatus;
+    getTemplateIngestionStatus(jobId: string): Promise<{
+        jobId: string;
+        state: string;
+        status: string;
+        progress: number;
+        result?: undefined;
+        failedReason?: undefined;
+    } | {
+        jobId: string;
+        state: import("bullmq").JobState | "unknown";
+        progress: import("bullmq").JobProgress;
+        result: any;
+        failedReason: string;
+        status?: undefined;
+    }>;
+    getTemplates(): Promise<import("./entities/cv-template.entity").CvTemplate[]>;
+    deleteTemplate(id: string): Promise<{
         message: string;
-        data: import("./candidate-data.types").FormattedCandidateData;
     }>;
+    generateCv(templateId: string, userId: number): Promise<{
+        status: string;
+        message: string;
+        jobId: string;
+    }>;
+    getCvGenerationStatus(jobId: string): Promise<{
+        jobId: string;
+        state: string;
+        status: string;
+        progress: number;
+        result?: undefined;
+        failedReason?: undefined;
+    } | {
+        jobId: string;
+        state: import("bullmq").JobState | "unknown";
+        progress: import("bullmq").JobProgress;
+        result: any;
+        failedReason: string;
+        status?: undefined;
+    }>;
+    downloadGeneratedPdf(fileName: string, res: Response): Promise<void>;
 }

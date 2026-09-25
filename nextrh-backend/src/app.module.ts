@@ -29,6 +29,11 @@ import { CvParserModule } from './cv-parser/cv-parser.module';
 import { MailModule } from './mail/mail.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LlmModule } from './llm/llm.module';
+import { BullModule } from '@nestjs/bullmq';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter'; 
+import { FileStorageService } from './common/services/file-storage/file-storage.service';
+import { ExpressAdapter } from '@bull-board/express';
 @Module({
  imports: [
     ConfigModule.forRoot({ isGlobal: true , 
@@ -36,7 +41,19 @@ import { LlmModule } from './llm/llm.module';
       ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 10,
-    }]),
+    }]), BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        connection: {
+          host: configService.get<string>('REDIS_HOST') || 'localhost',
+          port: configService.get<number>('REDIS_PORT') || 6379,
+        },
+      }),
+    }),
+     BullBoardModule.forRoot({
+      route: '/admin/queues', // Accessible in browser at http://localhost:3000/admin/queues
+      adapter: ExpressAdapter,
+    }),
    TypeOrmModule.forRootAsync({
   imports: [ConfigModule],
   inject: [ConfigService],
@@ -47,11 +64,8 @@ import { LlmModule } from './llm/llm.module';
     username: configService.get<string>('DB_USERNAME', 'postgres'),
     password: configService.get<string>('DB_PASSWORD'),
     database: configService.get<string>('DB_NAME', 'nextrh_db'),
-    // This dynamically loads all your entities automatically
-    entities: [__dirname + '/**/*.entity{.ts,.js}'],
-    // In production, synchronize MUST be false to protect your data.
-    // It will only be true during local development.
-    synchronize: configService.get<string>('NODE_ENV') !== 'production',
+     entities: [__dirname + '/**/*.entity{.ts,.js}'],
+     synchronize: configService.get<string>('NODE_ENV') !== 'production',
   }),
 }),
      EventEmitterModule.forRoot(),
@@ -83,7 +97,7 @@ import { LlmModule } from './llm/llm.module';
  providers: [ GoogleCalendarService ,{
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
-    },],
+    }, FileStorageService,],
 
 })
 export class AppModule {}

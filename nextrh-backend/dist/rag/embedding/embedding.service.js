@@ -15,77 +15,36 @@ var EmbeddingService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmbeddingService = void 0;
 const common_1 = require("@nestjs/common");
-const config_1 = require("@nestjs/config");
 const embeddings_1 = require("@langchain/core/embeddings");
 const llm_interface_1 = require("../../llm/llm.interface");
 let EmbeddingService = EmbeddingService_1 = class EmbeddingService {
-    constructor(embeddingModel, configService) {
+    constructor(embeddingModel) {
         this.embeddingModel = embeddingModel;
-        this.configService = configService;
         this.logger = new common_1.Logger(EmbeddingService_1.name);
-        this.MAX_CHARS = 3000;
-        this.MAX_RETRIES = this.configService.get('EMBEDDING_MAX_RETRIES', 5);
-        this.BASE_RETRY_DELAY_MS = this.configService.get('EMBEDDING_RETRY_DELAY_MS', 10000);
-        this.logger.log(`EmbeddingService initialized with Max Retries: ${this.MAX_RETRIES}`);
+        this.MAX_CHARS = 20000;
     }
     async embed(text) {
         if (!text || text.trim().length === 0) {
             return [];
         }
         const cleanText = text.replace(/[\x00-\x1F\x7F]/g, '').slice(0, this.MAX_CHARS);
-        for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
-            try {
-                const embedding = await this.embeddingModel.embedQuery(cleanText);
-                if (!embedding || !Array.isArray(embedding)) {
-                    throw new Error('Embedding engine returned an invalid coordinate structure.');
-                }
-                return embedding;
-            }
-            catch (err) {
-                const isRateLimit = this.isRateLimitError(err);
-                const isLastAttempt = attempt === this.MAX_RETRIES;
-                if (isRateLimit && !isLastAttempt) {
-                    const retryAfterMs = this.extractRetryAfterMs(err) ?? this.BASE_RETRY_DELAY_MS;
-                    this.logger.warn(`Embedding rate limit hit (attempt ${attempt}/${this.MAX_RETRIES}). ` +
-                        `Waiting ${retryAfterMs}ms before retry...`);
-                    await this.sleep(retryAfterMs);
-                    continue;
-                }
-                if (!isLastAttempt && !isRateLimit) {
-                    this.logger.warn(`Embedding failed (attempt ${attempt}/${this.MAX_RETRIES}): ${err.message}. Retrying...`);
-                    await this.sleep(this.BASE_RETRY_DELAY_MS);
-                    continue;
-                }
-                this.logger.error(`Text vectorization critical failure: ${err.message}`);
-                throw new common_1.ServiceUnavailableException('The underlying language embedding service failed to process the text array context.');
-            }
-        }
-        throw new common_1.ServiceUnavailableException('Embedding failed after all retries.');
-    }
-    isRateLimitError(err) {
-        return err?.message?.includes('429') || err?.message?.includes('Too Many Requests');
-    }
-    extractRetryAfterMs(err) {
         try {
-            const message = err?.message ?? '';
-            const match = message.match(/"retryDelay"\s*:\s*"([\d.]+)s"/);
-            if (match) {
-                return Math.ceil(parseFloat(match[1]) * 1000) + 500;
+            const vector = await this.embeddingModel.embedQuery(cleanText);
+            if (!vector || !Array.isArray(vector)) {
+                throw new Error('Embedding engine returned an invalid vector structure.');
             }
+            return vector;
         }
-        catch {
+        catch (error) {
+            this.logger.error(`Failed to generate vector embedding: ${error.message}`);
+            throw new common_1.InternalServerErrorException(`Embedding generation failed: ${error.message}`);
         }
-        return null;
-    }
-    sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
     }
 };
 exports.EmbeddingService = EmbeddingService;
 exports.EmbeddingService = EmbeddingService = EmbeddingService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, common_1.Inject)(llm_interface_1.EMBEDDING_ENGINE)),
-    __metadata("design:paramtypes", [embeddings_1.Embeddings,
-        config_1.ConfigService])
+    __metadata("design:paramtypes", [embeddings_1.Embeddings])
 ], EmbeddingService);
 //# sourceMappingURL=embedding.service.js.map

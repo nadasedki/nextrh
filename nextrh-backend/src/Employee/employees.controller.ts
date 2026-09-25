@@ -12,8 +12,7 @@ export class EmployeesController {
 
   @Get('me')
   async findMe(@Req() req) {
-    // Extract userId from JWT
-    const userId = req.user?.userId;
+   const userId = req.user?.userId;
      console.log(' GET /employees/me - userId:', userId);
     return this.employeesService.getDashboardData(userId);
   }

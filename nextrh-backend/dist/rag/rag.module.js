@@ -15,8 +15,6 @@ const chunking_service_1 = require("./chunking/chunking.service");
 const prompt_service_1 = require("./prompting/prompt.service");
 const llm_service_1 = require("./llm/llm.service");
 const retrieval_service_1 = require("./retrieval/retrieval.service");
-const reranking_service_1 = require("./reranking/reranking.service");
-const cv_service_1 = require("./cv.service");
 const rag_pipeline_service_1 = require("./application/rag-pipeline.service");
 const rag_orchestrator_service_1 = require("./application/rag-orchestrator.service");
 const indexing_service_1 = require("./indexing/indexing.service");
@@ -26,12 +24,22 @@ const EmployeesModule_1 = require("../Employee/EmployeesModule");
 const indexing_event_listener_1 = require("./indexing/indexing-event.listener");
 const vector_mapping_repository_1 = require("./indexing/vector-mapping.repository");
 const evaluation_controller_1 = require("./evaluation/evaluation.controller");
+const bullMQ_js_1 = require("@bull-board/api/dist/queueAdapters/bullMQ.js");
+const bull_board_module_1 = require("@bull-board/nestjs/dist/bull-board.module");
+const bullmq_1 = require("@nestjs/bullmq");
+const vector_indexing_processor_1 = require("./indexing/processors/vector-indexing.processor");
 let RagModule = class RagModule {
 };
 exports.RagModule = RagModule;
 exports.RagModule = RagModule = __decorate([
     (0, common_1.Module)({
-        imports: [EmployeesModule_1.EmployeesModule],
+        imports: [bullmq_1.BullModule.registerQueue({
+                name: 'vector-indexing',
+            }),
+            bull_board_module_1.BullBoardModule.forFeature({
+                name: 'vector-indexing',
+                adapter: bullMQ_js_1.BullMQAdapter,
+            }), EmployeesModule_1.EmployeesModule],
         controllers: [rag_controller_1.RagController, evaluation_controller_1.EvaluationController],
         providers: [
             embedding_service_1.EmbeddingService,
@@ -40,8 +48,7 @@ exports.RagModule = RagModule = __decorate([
             prompt_service_1.PromptService,
             llm_service_1.LlmService,
             retrieval_service_1.RetrievalService,
-            reranking_service_1.RerankingService,
-            cv_service_1.CvService,
+            vector_indexing_processor_1.VectorIndexingProcessor,
             rag_pipeline_service_1.RagPipelineService,
             rag_orchestrator_service_1.RagOrchestratorService,
             indexing_service_1.IndexingService,

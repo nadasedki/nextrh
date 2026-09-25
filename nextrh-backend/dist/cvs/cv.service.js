@@ -53,33 +53,83 @@ const cv_entity_1 = require("./entities/cv.entity");
 const date_fns_1 = require("date-fns");
 const locale_1 = require("date-fns/locale");
 const event_emitter_1 = require("@nestjs/event-emitter");
+const config_1 = require("@nestjs/config");
+const bullmq_1 = require("@nestjs/bullmq");
+const bullmq_2 = require("bullmq");
 const fs = __importStar(require("fs/promises"));
 const path = __importStar(require("path"));
-const config_1 = require("@nestjs/config");
 let CvService = class CvService {
-    constructor(cvRepository, dataSource, eventEmitter, configService) {
+    constructor(cvRepository, dataSource, eventEmitter, configService, cvQueue) {
         this.cvRepository = cvRepository;
         this.dataSource = dataSource;
         this.eventEmitter = eventEmitter;
         this.configService = configService;
+        this.cvQueue = cvQueue;
         const configuredPath = this.configService.get('UPLOAD_DESTINATION') || './uploads/cvs';
         this.uploadDir = path.isAbsolute(configuredPath)
             ? configuredPath
             : path.join(process.cwd(), configuredPath);
     }
+    async enqueueCvUpload(userId, file) {
+        await fs.mkdir(this.uploadDir, { recursive: true });
+        const ext = path.extname(file.originalname) || '.pdf';
+        const fileName = `cv-${userId}-${Date.now()}${ext}`;
+        const fullDiskPath = path.join(this.uploadDir, fileName);
+        await fs.writeFile(fullDiskPath, file.buffer);
+        const relativePath = path.join('uploads', 'cvs', fileName).replace(/\\/g, '/');
+        const job = await this.cvQueue.add('parse-cv', {
+            userId,
+            fullDiskPath,
+            relativePath,
+            originalName: file.originalname,
+        }, {
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 3000 },
+            removeOnComplete: { age: 3600, count: 500 },
+            removeOnFail: { age: 86400 },
+        });
+        return {
+            status: 'queued',
+            message: 'CV uploaded successfully and is being processed in the background.',
+            jobId: job.id,
+        };
+    }
+    async getJobStatus(jobId) {
+        const job = await this.cvQueue.getJob(jobId);
+        if (!job) {
+            return {
+                jobId,
+                state: 'completed',
+                status: 'completed',
+                progress: 100
+            };
+        }
+        const state = await job.getState();
+        return {
+            jobId: job.id,
+            state,
+            progress: job.progress,
+            result: job.returnvalue || null,
+            failedReason: job.failedReason || null,
+        };
+    }
     async saveIdentityCv(userId, filePath, cvJson) {
+        const profile = cvJson.profile || cvJson.personal_info || cvJson;
+        const skillsValue = Array.isArray(profile.skills)
+            ? profile.skills.join(', ')
+            : (profile.skills || '');
         const cv = this.cvRepository.create({
             user_id: userId,
             file_path: filePath,
             format: 'pdf',
             generated: true,
-            full_name: cvJson.profile?.name,
-            profession: cvJson.profile?.profession,
-            email: cvJson.profile?.email,
-            phone: cvJson.profile?.phone,
-            fax: cvJson.profile?.fax,
-            address: cvJson.profile?.address,
-            skills: cvJson.profile.skills || [],
+            full_name: profile.name || profile.full_name,
+            profession: profile.profession,
+            email: profile.email,
+            phone: profile.phone,
+            fax: profile.fax,
+            address: profile.address,
+            skills: skillsValue,
         });
         return await this.cvRepository.save(cv);
     }
@@ -89,8 +139,8 @@ let CvService = class CvService {
             throw new common_1.NotFoundException('CV non trouvé');
         const [certs, edus, projs, exps] = await Promise.all([
             this.dataSource.query('SELECT cert_name, provider, issue_date, expiry_date FROM certifications WHERE "cvCvId"=$1 ORDER BY issue_date DESC', [cvId]),
-            this.dataSource.query('SELECT degree, institution,  start_year, end_year FROM educations WHERE "cvCvId"=$1 ', [cvId]),
-            this.dataSource.query('SELECT name, client, role, description, end_date,start_date FROM projects WHERE "cvCvId"=$1 ORDER BY end_date DESC', [cvId]),
+            this.dataSource.query('SELECT degree, institution, start_year, end_year FROM educations WHERE "cvCvId"=$1 ', [cvId]),
+            this.dataSource.query('SELECT name, client, role, description, end_date, start_date FROM projects WHERE "cvCvId"=$1 ORDER BY end_date DESC', [cvId]),
             this.dataSource.query('SELECT company, role, start_date, end_date, description FROM experiences WHERE "cvCvId"=$1 ORDER BY end_date DESC', [cvId]),
         ]);
         let skillsArray = [];
@@ -148,9 +198,11 @@ exports.CvService = CvService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(cv_entity_1.Cv)),
     __param(1, (0, typeorm_1.InjectDataSource)()),
+    __param(4, (0, bullmq_1.InjectQueue)('cv-parsing')),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.DataSource,
         event_emitter_1.EventEmitter2,
-        config_1.ConfigService])
+        config_1.ConfigService,
+        bullmq_2.Queue])
 ], CvService);
 //# sourceMappingURL=cv.service.js.map

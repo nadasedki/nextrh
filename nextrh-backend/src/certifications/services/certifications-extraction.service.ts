@@ -11,10 +11,7 @@ export class CertificationsParserService {
     private readonly certsService: CertificationsService,
   ) {}
 
-  /**
-   * Orchestre l'enregistrement physique du fichier, l'extraction OCR/LLM via AiService
-   * et la sauvegarde finale en base de données.
-   */
+
  async extractAndPreviewCertificate(
   employeeId: number, 
   file: Express.Multer.File,
@@ -128,62 +125,7 @@ if (cleanExtracted !== cleanExpected) {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   
-  return `${year}-${month}-${day}`; // Format YYYY-MM-DD parfait pour PostgreSQL / MySQL
+  return `${year}-${month}-${day}`; 
 }
 }
 
-   /*async extractAndSaveCertificate(employeeId: number, file: Express.Multer.File) {
-    try {
-      // 1. Gestion de l'infrastructure locale (Dossier uploads)
-      const userFolder = path.join(process.cwd(), 'uploads', `user_${employeeId}`);
-      if (!fs.existsSync(userFolder)) {
-        fs.mkdirSync(userFolder, { recursive: true });
-      }
-
-      const filePath = path.join(userFolder, file.originalname);
-      fs.writeFileSync(filePath, file.buffer);
-
-      // 2. Extraction par Intelligence Artificielle
-      const aiData = await this.aiService.extractCertificate(filePath);
-      const certificateObj = Array.isArray(aiData) ? aiData[0] : aiData;
-      
-      if (!certificateObj || Object.keys(certificateObj).length === 0) {
-        throw new BadRequestException('AI returned empty or unreadable data');
-      }
-
-      console.log(' [AI Extraction Success]:', certificateObj);
-const isFailedExtraction = 
-        (!certificateObj.certificate_name || String(certificateObj.certificate_name).trim().toLowerCase() === 'null') &&
-        (!certificateObj.provider || String(certificateObj.provider).trim().toLowerCase() === 'null') &&
-        (!certificateObj.date_of_obtention || String(certificateObj.date_of_obtention).trim().toLowerCase() === 'null');
-
-      if (isFailedExtraction) {
-        console.warn(` [Parser-Orchestrator]: Extraction failed for file ${file.originalname}. Document is invalid or empty.`);
-        throw new BadRequestException('Extraction failed: The document does not contain valid certificate data.');
-      }
-      // 3. Post-processing : Standardisation stricte des dates (Format YYYY-MM-DD)
-      const standardizedIssueDate = this.formatDateToISO(certificateObj.date_of_obtention);
-      const standardizedExpiryDate = this.formatDateToISO(certificateObj.date_of_expiration);
-      // 3. Mapping technique & Calcul du statut de validité
-      const status = this.calculateStatus(certificateObj.date_of_expiration);
-
-      // 4. Délégation de la sauvegarde au service de Domaine métier
-      const savedCert = await this.certsService.create(employeeId, {
-        name: certificateObj.certificate_name,
-        issuer: certificateObj.provider,
-       issueDate: certificateObj.date_of_obtention, // Injecté comme string propre "YYYY-MM-DD"
-        expirationDate: certificateObj.date_of_expiration, // Injecté comme string propre ou null credentialId: certificateObj.credential_id || null,
-        status: status as 'active' | 'expired' | 'expiring_soon',
-        filePath: filePath,
-      });
-
-      return savedCert;
-    } catch (error) {
-      console.error(' [Parser-Orchestrator Error]:', error.message);
-      throw error;
-    }
-  }
-*/
-  /**
-   * Règle de gestion isolée : Détermine l'état de validité de la certification
-   */

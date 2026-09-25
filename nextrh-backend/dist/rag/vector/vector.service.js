@@ -18,12 +18,15 @@ let VectorService = VectorService_1 = class VectorService {
     constructor(configService) {
         this.configService = configService;
         this.logger = new common_1.Logger(VectorService_1.name);
-        this.VECTOR_SIZE = 1024;
+        const qdrantUrl = this.configService.get('QDRANT_URL');
         const host = this.configService.get('QDRANT_HOST', '127.0.0.1');
         const port = this.configService.get('QDRANT_PORT', 6333);
         this.collection = this.configService.get('QDRANT_COLLECTION', 'user_profiles');
-        this.client = new js_client_rest_1.QdrantClient({ host, port });
-        this.logger.log(`Qdrant client initialized on ${host}:${port} targeting collection "${this.collection}"`);
+        this.vectorSize = this.configService.get('QDRANT_VECTOR_SIZE', 1024);
+        this.client = qdrantUrl
+            ? new js_client_rest_1.QdrantClient({ url: qdrantUrl })
+            : new js_client_rest_1.QdrantClient({ host, port });
+        this.logger.log(`Qdrant client initialized targeting collection "${this.collection}" (Vector Size: ${this.vectorSize})`);
     }
     async onModuleInit() {
         try {
@@ -41,12 +44,13 @@ let VectorService = VectorService_1 = class VectorService {
             this.logger.error(`Failed to connect to Qdrant during initialization: ${err.message}`);
         }
     }
-    async search(vector, topK = 10) {
+    async search(vector, topK = 10, filter) {
         try {
             return await this.client.search(this.collection, {
                 vector: vector,
                 limit: Math.max(1, Math.floor(Number(topK))),
                 with_payload: true,
+                filter: filter || undefined,
             });
         }
         catch (err) {
@@ -100,15 +104,15 @@ let VectorService = VectorService_1 = class VectorService {
             const exists = collections.collections.some(c => c.name === this.collection);
             if (exists) {
                 await this.client.deleteCollection(this.collection);
-                this.logger.log(`Dropped old collection trace: "${this.collection}"`);
+                this.logger.log(`Dropped old collection: "${this.collection}"`);
             }
             await this.client.createCollection(this.collection, {
                 vectors: {
-                    size: this.VECTOR_SIZE,
+                    size: this.vectorSize,
                     distance: 'Cosine',
                 },
             });
-            this.logger.log(`Successfully deployed collection "${this.collection}" (Size: ${this.VECTOR_SIZE}, Metric: Cosine)`);
+            this.logger.log(`Successfully deployed collection "${this.collection}" (Size: ${this.vectorSize}, Metric: Cosine)`);
         }
         catch (err) {
             this.logger.error(`Failed to recreate collection "${this.collection}": ${err.message}`);

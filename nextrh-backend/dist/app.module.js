@@ -31,6 +31,10 @@ const cv_parser_module_1 = require("./cv-parser/cv-parser.module");
 const mail_module_1 = require("./mail/mail.module");
 const throttler_1 = require("@nestjs/throttler");
 const llm_module_1 = require("./llm/llm.module");
+const bullmq_1 = require("@nestjs/bullmq");
+const nestjs_1 = require("@bull-board/nestjs");
+const file_storage_service_1 = require("./common/services/file-storage/file-storage.service");
+const express_1 = require("@bull-board/express");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -42,7 +46,19 @@ exports.AppModule = AppModule = __decorate([
             throttler_1.ThrottlerModule.forRoot([{
                     ttl: 60000,
                     limit: 10,
-                }]),
+                }]), bullmq_1.BullModule.forRootAsync({
+                inject: [config_1.ConfigService],
+                useFactory: (configService) => ({
+                    connection: {
+                        host: configService.get('REDIS_HOST') || 'localhost',
+                        port: configService.get('REDIS_PORT') || 6379,
+                    },
+                }),
+            }),
+            nestjs_1.BullBoardModule.forRoot({
+                route: '/admin/queues',
+                adapter: express_1.ExpressAdapter,
+            }),
             typeorm_1.TypeOrmModule.forRootAsync({
                 imports: [config_1.ConfigModule],
                 inject: [config_1.ConfigService],
@@ -79,7 +95,7 @@ exports.AppModule = AppModule = __decorate([
         providers: [google_calendar_service_1.GoogleCalendarService, {
                 provide: core_1.APP_GUARD,
                 useClass: throttler_1.ThrottlerGuard,
-            },],
+            }, file_storage_service_1.FileStorageService,],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

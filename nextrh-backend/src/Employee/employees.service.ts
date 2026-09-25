@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, DataSource, Like, Repository } from 'typeorm';
 
-// Entities
+
 import { User } from '../users/entities/user.entity';
 import { Project } from '../project/entities/project.entity';
 import { Training } from '../training/entities/training.entity';
@@ -165,23 +165,42 @@ return {
       }))
     };
   }
-  async findAllEmployees() {
-    return this.userRepository.find({
-           relations: ['certifications'], 
-       where: { active: true }, 
-        order: { score: 'DESC' } 
-    });
-  }
-  async searchEmployees(query: string) {
-    // Basic search functionality (can be made more robust with SQL queries)
-    return this.userRepository.find({
-      where: [
-        { full_name: Like(`%${query}%`), active: true },
-        { title: Like(`%${query}%`), active: true },
-          ],
-      relations: [ 'certifications'],
-    });
-  }
+
+async findAllEmployees() {
+  return this.userRepository.find({
+    relations: ['certifications', 'role'],
+    where: {
+      active: true,
+      role: {
+        role_name: 'EMPLOYEE' as any, 
+      },
+    },
+    order: { score: 'DESC' },
+  });
+}
+
+async searchEmployees(query: string) {
+  return this.userRepository.find({
+    where: [
+      {
+        full_name: Like(`%${query}%`),
+        active: true,
+        role: {
+          role_name: 'EMPLOYEE' as any, 
+        },
+      },
+      {
+        title: Like(`%${query}%`),
+        active: true,
+        role: {
+          role_name: 'EMPLOYEE' as any, 
+        },
+      },
+    ],
+    relations: ['certifications', 'role'],
+    order: { score: 'DESC' },
+  });
+}
   async findOne(id: number) {
   const user = await this.userRepository.findOne({
     where: { user_id: id ,active: true},
@@ -201,7 +220,6 @@ return {
   });
   return {
     ...user,
-    // On injecte les colonnes spécifiques du CV si elles existent
     cv_full_name: latestCv?.full_name ,
     cv_profession: latestCv?.profession || 'N/A',
     cv_phone: latestCv?.phone || 'N/A',

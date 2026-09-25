@@ -241,10 +241,12 @@ const retrievedDocIds = state.reranked.map(r => {
     const faithfulnessScore = this.calculateFaithfulness(faithfulnessText, input.retrievedContextText);
 
     // success: grounded in context AND (lexically close OR semantically close to reference)
-    const success =
-      faithfulnessScore >= this.FAITHFULNESS_SUCCESS_THRESHOLD &&
-      (rougeLScore >= this.ROUGE_SUCCESS_THRESHOLD || semanticSimilarityScore >= this.SEMANTIC_SUCCESS_THRESHOLD);
+ const isNegativeQuery = !input.expectedDocIds || input.expectedDocIds.length === 0;
 
+const success = isNegativeQuery
+  ? (semanticSimilarityScore >= 0.85) // For negative queries, success relies solely on semantic validation [1]
+  : (faithfulnessScore >= this.FAITHFULNESS_SUCCESS_THRESHOLD &&
+      (rougeLScore >= this.ROUGE_SUCCESS_THRESHOLD || semanticSimilarityScore >= this.SEMANTIC_SUCCESS_THRESHOLD));
     return {
       precisionAt3, recallAt3,
       precisionAt5, recallAt5,
@@ -271,7 +273,7 @@ const retrievedDocIds = state.reranked.map(r => {
     return parseFloat((dot / (Math.sqrt(normA) * Math.sqrt(normB))).toFixed(4));
   }
 
-  private calculatePrecisionAtK(retrieved: string[], expected: string[], k: number): number {
+  public  calculatePrecisionAtK(retrieved: string[], expected: string[], k: number): number {
     if (k === 0 || retrieved.length === 0) return 0.0;
     const relevant = retrieved.slice(0, k).filter(id => expected.includes(id)).length;
     return parseFloat((relevant / k).toFixed(4));
@@ -283,7 +285,7 @@ const retrievedDocIds = state.reranked.map(r => {
     return parseFloat((relevant / expected.length).toFixed(4));
   }
 
-  private calculateMRR(retrieved: string[], expected: string[]): number {
+  public  calculateMRR(retrieved: string[], expected: string[]): number {
     for (let i = 0; i < retrieved.length; i++) {
       if (expected.includes(retrieved[i])) return parseFloat((1 / (i + 1)).toFixed(4));
     }

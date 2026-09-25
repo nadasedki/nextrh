@@ -48,7 +48,7 @@ PDF DOCUMENT:
         });
         const llmInferenceMs = perf_hooks_1.performance.now() - llmStart;
         const totalMs = Math.round(perf_hooks_1.performance.now() - globalStart);
-        this.logger.log(`Gemini multimodal CV parse complete in ${(totalMs / 1000).toFixed(2)}s`);
+        this.logger.log(`  CV parse complete in ${(totalMs / 1000).toFixed(2)}s`);
         return this.mapToResponse(result, totalMs, Math.round(llmInferenceMs), base64Pdf.length);
     }
     mapToResponse(result, totalMs, llmMs, charCount) {

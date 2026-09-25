@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { ILlmEngine } from './llm.interface';
 import { OllamaProvider } from './providers/ollama.provider';
 import { GeminiProvider } from './providers/gemini.provider';
-//import { OpenAiProvider } from './providers/openai.provider';
 import { OllamaEmbeddings } from '@langchain/ollama';
 const logger = new Logger('LlmFactory');
 import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
@@ -35,7 +34,7 @@ export function createLlmEngine(configService: ConfigService): ILlmEngine {
       return new OllamaProvider(configService);
   }}
 /**
- * 2. Factory function to instantiate the correct embedding model based on .env [1, 2]
+ * 2. Factory function to instantiate the correct embedding model based on .env 
  */
 export function createEmbeddingEngine(configService: ConfigService): any {
   const provider = configService.get<string>('EMBEDDING_PROVIDER', 'ollama').toLowerCase();

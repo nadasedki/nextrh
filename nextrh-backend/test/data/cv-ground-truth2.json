@@ -867,6 +867,612 @@
         }
       ]
     }
+  },
+  {
+  "fileName": "cvs/Imen_ZRIBI.pdf",
+  "expected": {
+    "profile": {
+      "name": "Imen ZRIBI",
+      "profession": "Ingénieure Cybersécurité GRC",
+      "phone": "+216 98 445 670",
+      "email": "i.zribi@nextstep-it.com",
+      "address": "6 Rue du Lac Malaren, Les Berges du Lac, 1053 Tunis, Tunisie",
+      "skills": [
+        "GRC",
+        "ISO 27001",
+        "ISO 22301",
+        "NIST",
+        "Audit IT",
+        "Conformité",
+        "Contrôle Interne",
+        "Risk Management",
+        "PCA/PRA",
+        "Documentation Sécurité & Policies",
+        "Excel Avancé"
+      ]
+    },
+    "experience": [
+      {
+        "company": "Next Step",
+        "period": "Depuis Septembre 2022",
+        "role": "IT Ingénieure GRC Cybersécurité"
+      },
+      {
+        "company": "SecureRisk Tunisia",
+        "period": "2020 – 2022",
+        "role": "Risk & Compliance Analyst"
+      },
+      {
+        "company": "AuditSec Tunisia",
+        "period": "2018 – 2020",
+        "role": "IT Security Auditor"
+      }
+    ],
+    "certifications": [
+      {
+        "certName": "ISO/IEC 27001 Lead Implementer",
+        "date": "Mars 2023"
+      },
+      {
+        "certName": "Certified Information Systems Auditor (CISA)",
+        "date": "Novembre 2022"
+      },
+      {
+        "certName": "ISO 22301 Business Continuity Lead",
+        "date": "Juin 2022"
+      },
+      {
+        "certName": "Risk Management Professional (PMI-RMP)",
+        "date": "Janvier 2022"
+      }
+    ],
+    "education": [
+      {
+        "institution": "ESPRIT Tunis",
+        "degree": "Diplôme National d’Ingénieur en Sécurité Informatique",
+        "year": "2015 – 2018"
+      },
+      {
+        "institution": "ISET Nabeul",
+        "degree": "Licence en Informatique de Gestion",
+        "year": "2013 – 2015"
+      }
+    ],
+    "projects": [
+      {
+        "client": "Banque Centrale de Tunisie",
+        "description": "Mise en conformité ISO 27001 infrastructure bancaire",
+        "year": "2023"
+      },
+      {
+        "client": "CNSS Tunisie",
+        "description": "Audit sécurité système d'information national",
+        "year": "2022"
+      },
+      {
+        "client": "Ministère des Finances Tunisie",
+        "description": "Analyse des risques IT et plan de mitigation",
+        "year": "2022"
+      },
+      {
+        "client": "Ooredoo Tunisie",
+        "description": "Politique de sécurité et gouvernance IT",
+        "year": "2021"
+      },
+      {
+        "client": "Tunisie Telecom",
+        "description": "Mise en place PCA/PRA (continuité d'activité)",
+        "year": "2020"
+      }
+    ]
   }
+},
+{
+  "fileName": "cvs/Mariem_GHARBI.pdf",
+  "expected": {
+    "profile": {
+      "name": "Mariem GHARBI",
+      "profession": "Développeuse Frontend",
+      "phone": "+216 98 772 019",
+      "email": "m.gharbi@nextstep-it.com",
+      "address": "11 Rue Ibn Khaldoun, Lafayette, 1002 Tunis, Tunisie",
+      "skills": [
+        "React.js",
+        "Vue.js",
+        "Redux",
+        "Vuex",
+        "HTML5",
+        "CSS3",
+        "JavaScript",
+        "UI/UX",
+        "Figma",
+        "Adobe XD",
+        "Git",
+        "Webpack",
+        "Vite",
+        "Responsive Design",
+        "REST API"
+      ]
+    },
+    "experience": [
+      {
+        "company": "Next Step",
+        "period": "Depuis Mars 2023",
+        "role": "IT Développeuse Frontend"
+      },
+      {
+        "company": "UI Factory",
+        "period": "2020 – 2023",
+        "role": "Frontend Developer"
+      },
+      {
+        "company": "Creative Web Studio",
+        "period": "2018 – 2020",
+        "role": "Web Designer & Integrator"
+      }
+    ],
+    "certifications": [
+      {
+        "certName": "Meta Front-End Developer Professional Certificate",
+        "date": "Février 2023"
+      },
+      {
+        "certName": "Google UX Design Certificate",
+        "date": "Juin 2022"
+      },
+      {
+        "certName": "JavaScript Algorithms and Data Structures (freeCodeCamp)",
+        "date": "Novembre 2021"
+      },
+      {
+        "certName": "Responsive Web Design Certification",
+        "date": "Avril 2021"
+      }
+    ],
+    "education": [
+      {
+        "institution": "ISET Charguia",
+        "degree": "Licence en Multimédia et Développement Web",
+        "year": "2016 – 2019"
+      },
+      {
+        "institution": "Lycée Pilote Ariana",
+        "degree": "Baccalauréat Informatique",
+        "year": "2014 – 2016"
+      }
+    ],
+    "projects": [
+      {
+        "client": "BIAT",
+        "description": "Refonte interface web e-banking responsive",
+        "year": "2023"
+      },
+      {
+        "client": "Ooredoo Tunisie",
+        "description": "Développement portail client React.js",
+        "year": "2022"
+      },
+      {
+        "client": "Tunisie Telecom",
+        "description": "Interface web gestion des tickets support",
+        "year": "2022"
+      },
+      {
+        "client": "Delice Holding",
+        "description": "Dashboard analytics ventes web",
+        "year": "2021"
+      },
+      {
+        "client": "SmartGov Tunisia",
+        "description": "Plateforme web services administratifs citoyens",
+        "year": "2020"
+      }
+    ]
+  }
+},
+{
+  "fileName": "cvs/Mohamed_AMRI.pdf",
+  "expected": {
+    "profile": {
+      "name": "Mohamed AMRI",
+      "profession": "Ingénieur DevOps & Cloud",
+      "phone": "+216 98 667 903",
+      "email": "m.amri@nextstep-it.com",
+      "address": "9 Rue du Lac Victoria, Les Berges du Lac, 1053 Tunis, Tunisie",
+      "skills": [
+        "Linux",
+        "Python",
+        "Docker",
+        "Kubernetes",
+        "Terraform",
+        "Ansible",
+        "Jenkins",
+        "GitLab CI",
+        "CI/CD",
+        "AWS",
+        "Azure",
+        "OpenStack",
+        "Prometheus",
+        "Grafana",
+        "Bash"
+      ]
+    },
+    "experience": [
+      {
+        "company": "Next Step",
+        "period": "Depuis Avril 2022",
+        "role": "IT Ingénieur DevOps & Cloud"
+      },
+      {
+        "company": "CloudOps Tunisia",
+        "period": "2019 – 2022",
+        "role": "DevOps Engineer"
+      },
+      {
+        "company": "NetSystems Tunisia",
+        "period": "2017 – 2019",
+        "role": "System Administrator"
+      }
+    ],
+    "certifications": [
+      {
+        "certName": "AWS Certified Solutions Architect – Associate",
+        "date": "Mai 2023"
+      },
+      {
+        "certName": "Kubernetes Certified Administrator (CKA)",
+        "date": "Février 2023"
+      },
+      {
+        "certName": "Docker Certified Associate",
+        "date": "Septembre 2022"
+      },
+      {
+        "certName": "Red Hat Certified System Administrator (RHCSA)",
+        "date": "Juin 2021"
+      }
+    ],
+    "education": [
+      {
+        "institution": "INSAT Tunis",
+        "degree": "Diplôme National d’Ingénieur en Informatique",
+        "year": "2014 – 2017"
+      },
+      {
+        "institution": "ISET Sousse",
+        "degree": "DUT en Réseaux et Télécommunications",
+        "year": "2012 – 2014"
+      }
+    ],
+    "projects": [
+      {
+        "client": "STEG (Société Tunisienne de l’Électricité et du Gaz)",
+        "description": "Migration vers architecture cloud hybride AWS",
+        "year": "2023"
+      },
+      {
+        "client": "Amen Bank",
+        "description": "Déploiement Kubernetes pour applications bancaires",
+        "year": "2022"
+      },
+      {
+        "client": "Tunisie Telecom",
+        "description": "Automatisation CI/CD pipelines GitLab",
+        "year": "2022"
+      },
+      {
+        "client": "Ooredoo Tunisie",
+        "description": "Monitoring cloud avec Prometheus & Grafana",
+        "year": "2021"
+      },
+      {
+        "client": "SNCFT (Société Nationale des Chemins de Fer Tunisiens)",
+        "description": "Containerisation applications legacy Docker",
+        "year": "2020"
+      }
+    ]
+  }
+},
+{
+  "fileName": "cvs/Oussama_BELHAJ.pdf",
+  "expected": {
+    "profile": {
+      "name": "Oussama BELHAJ",
+      "profession": "Développeur Backend Java / Spring Boot",
+      "phone": "+216 98 901 334",
+      "email": "o.belhaj@nextstep-it.com",
+      "address": "3 Rue des Jasmins, Montplaisir, 1073 Tunis, Tunisie",
+      "skills": [
+        "Java",
+        "Spring Boot",
+        "Hibernate",
+        "Microservices",
+        "REST API",
+        "SOAP",
+        "MySQL",
+        "PostgreSQL",
+        "MongoDB",
+        "Kafka",
+        "RabbitMQ",
+        "Maven",
+        "Git"
+      ]
+    },
+    "experience": [
+      {
+        "company": "Next Step",
+        "period": "Depuis Juillet 2022",
+        "role": "IT Développeuse Backend"
+      },
+      {
+        "company": "FinTech Solutions",
+        "period": "2020 – 2022",
+        "role": "Java Developer"
+      },
+      {
+        "company": "SoftDev Tunisia",
+        "period": "2018 – 2020",
+        "role": "Junior Backend Developer"
+      }
+    ],
+    "certifications": [
+      {
+        "certName": "Oracle Certified Professional Java SE 11 Developer",
+        "date": "Avril 2023"
+      },
+      {
+        "certName": "Spring Professional Certification",
+        "date": "Janvier 2023"
+      },
+      {
+        "certName": "MongoDB Certified Developer Associate",
+        "date": "Juin 2022"
+      },
+      {
+        "certName": "REST API Design (Udemy Verified)",
+        "date": "Octobre 2021"
+      }
+    ],
+    "education": [
+      {
+        "institution": "ESPRIT Tunis",
+        "degree": "Diplôme National d’Ingénieur en Informatique",
+        "year": "2015 – 2018"
+      },
+      {
+        "institution": "ISET Radès",
+        "degree": "Licence en Développement des Systèmes Informatiques",
+        "year": "2013 – 2015"
+      }
+    ],
+    "projects": [
+      {
+        "client": "Banque Zitouna",
+        "description": "Développement API core banking Spring Boot",
+        "year": "2023"
+      },
+      {
+        "client": "Ooredoo Tunisie",
+        "description": "Backend microservices gestion abonnés",
+        "year": "2022"
+      },
+      {
+        "client": "Tunisie Telecom",
+        "description": "API REST gestion tickets support client",
+        "year": "2022"
+      },
+      {
+        "client": "CNAM Tunisie",
+        "description": "Système de gestion des assurés backend",
+        "year": "2021"
+      },
+      {
+        "client": "Expensya",
+        "description": "Services backend gestion de dépenses SaaS",
+        "year": "2020"
+      }
+    ]
+  }
+},
+{
+  "fileName": "cvs/Sami_BEN_YOUSSEF.pdf",
+  "expected": {
+    "profile": {
+      "name": "Sami BEN YOUSSEF",
+      "profession": "Développeur Full Stack",
+      "phone": "+216 98 660 912",
+      "email": "s.benyoussef@nextstep-it.com",
+      "address": "19 Rue Hédi Nouira, Ennasr 2, 2037 Ariana, Tunisie",
+      "skills": [
+        "Spring Boot",
+        "React",
+        "Angular",
+        "Node.js",
+        "Microservices",
+        "REST API",
+        "Docker",
+        "MySQL",
+        "PostgreSQL",
+        "MongoDB",
+        "Git"
+      ]
+    },
+    "experience": [
+      {
+        "company": "Next Step",
+        "period": "Depuis Mai 2023",
+        "role": "IT Full Stack Developer"
+      },
+      {
+        "company": "Digital Factory",
+        "period": "2020 – 2023",
+        "role": "Full Stack Developer"
+      },
+      {
+        "company": "WebTech Tunisia",
+        "period": "2018 – 2020",
+        "role": "Junior Web Developer"
+      }
+    ],
+    "certifications": [
+      {
+        "certName": "Angular Developer Certification",
+        "date": "Février 2023"
+      },
+      {
+        "certName": "Spring Boot Microservices Certification",
+        "date": "Juin 2022"
+      },
+      {
+        "certName": "AWS Cloud Practitioner",
+        "date": "Novembre 2021"
+      },
+      {
+        "certName": "MongoDB Developer Associate",
+        "date": "Avril 2021"
+      }
+    ],
+    "education": [
+      {
+        "institution": "ESPRIT Tunis",
+        "degree": "Diplôme National d’Ingénieur en Informatique",
+        "year": "2015 – 2018"
+      },
+      {
+        "institution": "ISET Sfax",
+        "degree": "Licence en Développement des Systèmes Informatiques",
+        "year": "2013 – 2015"
+      }
+    ],
+    "projects": [
+      {
+        "client": "BIAT",
+        "description": "Plateforme web bancaire full stack Angular/Spring Boot",
+        "year": "2023"
+      },
+      {
+        "client": "Ooredoo Tunisie",
+        "description": "Système de gestion abonnés web & backend API",
+        "year": "2022"
+      },
+      {
+        "client": "Tunisie Telecom",
+        "description": "Application interne de gestion des incidents IT",
+        "year": "2022"
+      },
+      {
+        "client": "CNAM Tunisie",
+        "description": "Portail digital assurance maladie",
+        "year": "2021"
+      },
+      {
+        "client": "Expensya",
+        "description": "Module web de gestion des dépenses entreprise",
+        "year": "2020"
+      }
+    ]
+  }
+},{
+  "fileName": "cvs/Yassine_BEN_HASSINE.pdf",
+  "expected": {
+    "profile": {
+      "name": "Yassine BEN HASSINE",
+      "profession": "Ingénieur Data Engineer",
+      "phone": "+216 98 771 408",
+      "email": "y.benhassine@nextstep-it.com",
+      "address": "16 Rue de la Bourse, Centre Urbain Nord, 1082 Tunis, Tunisie",
+      "skills": [
+        "Python",
+        "SQL",
+        "Azure",
+        "GCP",
+        "ETL",
+        "Spark",
+        "Hadoop",
+        "Airflow",
+        "Talend",
+        "PostgreSQL",
+        "MongoDB",
+        "Oracle",
+        "Big Data",
+        "Data Modeling"
+      ]
+    },
+    "experience": [
+      {
+        "company": "Next Step",
+        "period": "Depuis Juin 2022",
+        "role": "IT Data Engineer"
+      },
+      {
+        "company": "DataBridge Tunisia",
+        "period": "2020 – 2022",
+        "role": "Data Engineer Junior"
+      },
+      {
+        "company": "BI Analytics",
+        "period": "2018 – 2020",
+        "role": "Data Analyst"
+      }
+    ],
+    "certifications": [
+      {
+        "certName": "Google Cloud Professional Data Engineer",
+        "date": "Avril 2023"
+      },
+      {
+        "certName": "Microsoft Azure Data Engineer Associate",
+        "date": "Décembre 2022"
+      },
+      {
+        "certName": "Databricks Certified Data Engineer Associate",
+        "date": "Juillet 2022"
+      },
+      {
+        "certName": "SQL Advanced Certification (Oracle)",
+        "date": "Mars 2021"
+      }
+    ],
+    "education": [
+      {
+        "institution": "INSAT Tunis",
+        "degree": "Diplôme National d’Ingénieur en Informatique",
+        "year": "2015 – 2018"
+      },
+      {
+        "institution": "ISET Radès",
+        "degree": "Licence en Informatique de Gestion",
+        "year": "2013 – 2015"
+      }
+    ],
+    "projects": [
+      {
+        "client": "Banque Centrale de Tunisie",
+        "description": "Mise en place pipeline ETL pour données financières",
+        "year": "2023"
+      },
+      {
+        "client": "Ooredoo Tunisie",
+        "description": "Architecture data warehouse pour analyse clients",
+        "year": "2022"
+      },
+      {
+        "client": "Tunisie Telecom",
+        "description": "Traitement big data trafic réseau temps réel",
+        "year": "2022"
+      },
+      {
+        "client": "CNSS Tunisie",
+        "description": "Centralisation et nettoyage données assurés",
+        "year": "2021"
+      },
+      {
+        "client": "Delice Holding",
+        "description": "Système de reporting BI automatisé",
+        "year": "2020"
+      }
+    ]
+  }
+}
 
 ]

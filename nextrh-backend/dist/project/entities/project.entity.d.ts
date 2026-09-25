@@ -5,11 +5,9 @@ export declare class Project {
     user_id: number;
     name: string;
     client: string;
-    role: string;
     description: string;
     start_date: Date;
     end_date: Date;
-    technologies: string[];
     user: User;
     cv: Cv;
 }

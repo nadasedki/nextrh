@@ -15,9 +15,11 @@ interface ChatMessage {
   timestamp: string;
 }
 
+// Realistic enterprise suggested queries
 const suggestedQueries = [
-  
-  "Trouve-moi un ingénieur sécurité réseaux",
+  "Find a network security engineer with active certifications",
+  "Who has experience with cloud architecture and microservices?",
+  "Show me team members with telecom or banking project experience",
 ];
 
 const AIChatPage: React.FC = () => {
@@ -26,7 +28,6 @@ const AIChatPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll vers le bas à chaque nouveau message
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -55,7 +56,7 @@ const AIChatPage: React.FC = () => {
         body: JSON.stringify({ question: query }),
       });
 
-      if (!response.ok) throw new Error('Erreur serveur');
+      if (!response.ok) throw new Error('Service unavailable');
 
       const data = await response.json();
 
@@ -71,7 +72,7 @@ const AIChatPage: React.FC = () => {
       setMessages(prev => [...prev, {
         id: Date.now().toString(),
         role: 'assistant',
-        content: "Désolé, je ne parviens pas à joindre le moteur d'IA. Vérifiez que Qdrant et Ollama sont actifs.",
+        content: "We're currently unable to connect to the talent search service. Please verify your connection or try again shortly.",
         timestamp: new Date().toISOString(),
       }]);
     } finally {
@@ -88,46 +89,60 @@ const AIChatPage: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Assistant RH Intelligent</h1>
-          <p className="text-muted-foreground text-sm">Interrogez votre base de connaissances en langage naturel</p>
+          <h1 className="text-2xl font-bold tracking-tight">Talent Search Copilot</h1>
+          <p className="text-muted-foreground text-sm">
+            Find qualified team members, expertise, and project experience instantly
+          </p>
         </div>
         {messages.length > 0 && (
-          <Button variant="outline" size="sm" onClick={handleClearChat} className="text-destructive border-destructive/20 hover:bg-destructive/10">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleClearChat} 
+            className="text-muted-foreground hover:text-destructive border-border hover:border-destructive/30"
+          >
             <Trash2 className="h-4 w-4 mr-2" />
-            Effacer la conversation
+            Clear Chat
           </Button>
         )}
       </div>
 
-      {/* Main Chat Container - Largeur max augmentée */}
-      <Card className="flex-1 flex flex-col overflow-hidden shadow-2xl border-primary/10 rounded-2xl bg-card">
-        <CardHeader className="border-b bg-muted/20 px-6 py-4">
-          <CardTitle className="flex items-center gap-2 text-md font-semibold text-primary">
-            <Sparkles className="h-5 w-5" />
-            Moteur de Recherche Sémantique
+      {/* Main Container */}
+      <Card className="flex-1 flex flex-col overflow-hidden shadow-xl border-border/80 rounded-2xl bg-card">
+        <CardHeader className="border-b bg-muted/30 px-6 py-3.5">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold text-primary">
+            <Sparkles className="h-4 w-4" />
+            Talent Intelligence Assistant
           </CardTitle>
         </CardHeader>
 
         {/* Message Area */}
         <CardContent 
           ref={scrollRef}
-          className="flex-1 p-6 space-y-6 overflow-y-auto bg-background/30"
+          className="flex-1 p-6 space-y-6 overflow-y-auto bg-background/40"
         >
           {messages.length === 0 && (
-            <div className="text-center py-20 max-w-lg mx-auto space-y-6">
-              <div className="p-4 bg-primary/10 rounded-full w-fit mx-auto animate-bounce">
-                <Bot className="h-10 w-10 text-primary" />
+            <div className="text-center py-16 max-w-xl mx-auto space-y-6">
+              <div className="p-4 bg-primary/10 rounded-2xl w-fit mx-auto shadow-sm">
+                <Bot className="h-9 w-9 text-primary" />
               </div>
-              <div>
-                <h3 className="text-lg font-semibold">Comment puis-je vous aider aujourd'hui ?</h3>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Je peux analyser les compétences, projets et certifications de vos collaborateurs pour trouver le profil idéal.
+              <div className="space-y-2">
+                <h3 className="text-xl font-semibold tracking-tight text-foreground">
+                  Find the right talent for your next project
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Describe the required skills, certifications, or past project experience to discover matching profiles across your organization.
                 </p>
               </div>
-              <div className="flex flex-col gap-2 pt-4">
+              <div className="flex flex-col gap-2 pt-2 text-left">
                 {suggestedQueries.map((q, i) => (
-                  <Button key={i} variant="outline" className="justify-start text-left text-sm py-5 hover:bg-primary/5 hover:text-primary transition-all duration-200" onClick={() => handleSend(q)}>
-                    <Sparkles className="h-4 w-4 mr-2 text-primary shrink-0" />
+                  <Button 
+                    key={i} 
+                    variant="outline" 
+                    className="justify-start text-left text-xs sm:text-sm py-4 h-auto hover:bg-primary/5 hover:border-primary/40 hover:text-primary transition-all duration-150" 
+                    onClick={() => handleSend(q)}
+                  >
+                    <Sparkles className="h-3.5 w-3.5 mr-2.5 text-primary shrink-0" />
                     {q}
                   </Button>
                 ))}
@@ -136,30 +151,29 @@ const AIChatPage: React.FC = () => {
           )}
 
           {messages.map((msg) => (
-            <div key={msg.id} className={cn("flex gap-4 items-start", msg.role === 'user' ? "flex-row-reverse" : "flex-row")}>
-              <Avatar className={cn("h-10 w-10 shrink-0 shadow-sm", msg.role === 'user' ? "border-2 border-primary/20" : "border-2 border-accent")}>
-                <AvatarFallback className={msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-accent text-accent-foreground'}>
-                  {msg.role === 'user' ? <User className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
+            <div key={msg.id} className={cn("flex gap-3.5 items-start", msg.role === 'user' ? "flex-row-reverse" : "flex-row")}>
+              <Avatar className={cn("h-9 w-9 shrink-0 shadow-xs", msg.role === 'user' ? "border border-primary/30" : "border border-border")}>
+                <AvatarFallback className={msg.role === 'user' ? 'bg-primary text-primary-foreground text-xs' : 'bg-muted text-foreground text-xs'}>
+                  {msg.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4 text-primary" />}
                 </AvatarFallback>
               </Avatar>
               
               <div className={cn(
-                "rounded-2xl p-5 shadow-sm leading-relaxed max-w-[80%]",
+                "rounded-2xl p-4 sm:p-5 shadow-xs leading-relaxed max-w-[82%]",
                 msg.role === 'user' 
                   ? 'bg-primary text-primary-foreground rounded-tr-none' 
-                  : 'bg-muted text-foreground rounded-tl-none border border-muted-foreground/10'
+                  : 'bg-muted/70 text-foreground rounded-tl-none border border-border/60'
               )}>
                 {msg.role === 'user' ? (
                   <p className="text-sm font-medium">{msg.content}</p>
                 ) : (
-                  // Rendu Markdown pour les réponses de l'IA
-                  <div className="text-sm space-y-2 select-text">
+                  <div className="text-sm space-y-2.5 select-text">
                     <ReactMarkdown 
                       remarkPlugins={[remarkGfm]}
                       components={{
-                        p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
-                        ul: ({ node, ...props }) => <ul className="list-disc pl-5 space-y-1 my-2" {...props} />,
-                        li: ({ node, ...props }) => <li className="marker:text-primary" {...props} />,
+                        p: ({ node, ...props }) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
+                        ul: ({ node, ...props }) => <ul className="list-disc pl-5 space-y-1.5 my-2" {...props} />,
+                        li: ({ node, ...props }) => <li className="marker:text-primary text-foreground/90" {...props} />,
                         strong: ({ node, ...props }) => <strong className="font-semibold text-primary dark:text-primary-foreground" {...props} />,
                       }}
                     >
@@ -172,30 +186,32 @@ const AIChatPage: React.FC = () => {
           ))}
 
           {isLoading && (
-            <div className="flex gap-4">
-              <Avatar className="h-10 w-10 border-2 border-accent">
-                <AvatarFallback className="bg-accent text-accent-foreground"><Bot className="h-5 w-5" /></AvatarFallback>
+            <div className="flex gap-3.5 items-start">
+              <Avatar className="h-9 w-9 border border-border">
+                <AvatarFallback className="bg-muted"><Bot className="h-4 w-4 text-primary" /></AvatarFallback>
               </Avatar>
-              <div className="bg-muted rounded-2xl rounded-tl-none p-5 flex items-center gap-3 border border-muted-foreground/10">
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                <span className="text-sm text-muted-foreground font-medium">L'IA parcourt la base vectorielle...</span>
+              <div className="bg-muted/70 rounded-2xl rounded-tl-none p-4 flex items-center gap-3 border border-border/60">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <span className="text-xs sm:text-sm text-muted-foreground font-medium">
+                  Analyzing team profiles and matching skills...
+                </span>
               </div>
             </div>
           )}
         </CardContent>
 
         {/* Input Bar */}
-        <div className="p-4 border-t bg-background">
+        <div className="p-4 border-t bg-card">
           <form onSubmit={(e) => { e.preventDefault(); handleSend(input); }} className="flex gap-2 max-w-5xl mx-auto">
             <Input 
-              placeholder="Ex: Qui a travaillé sur le projet Ooredoo RNIA3 ?" 
+              placeholder="Ask anything (e.g. 'Find an engineer with Kubernetes and AWS experience who worked on telecom projects')..." 
               value={input} 
               onChange={(e) => setInput(e.target.value)} 
               disabled={isLoading}
-              className="py-6 px-4 text-sm shadow-inner focus-visible:ring-primary focus-visible:ring-2"
+              className="py-5 px-4 text-sm shadow-xs focus-visible:ring-primary focus-visible:ring-1"
             />
-            <Button type="submit" size="icon" className="h-12 w-12 rounded-full shadow-lg shrink-0" disabled={isLoading || !input.trim()}>
-              <Send className="h-5 w-5" />
+            <Button type="submit" size="icon" className="h-11 w-11 rounded-xl shadow-md shrink-0" disabled={isLoading || !input.trim()}>
+              <Send className="h-4 w-4" />
             </Button>
           </form>
         </div>

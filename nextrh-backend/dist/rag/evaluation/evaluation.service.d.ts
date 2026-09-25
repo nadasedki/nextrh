@@ -16,9 +16,9 @@ export declare class EvaluationService {
     runEvaluationSuite(): Promise<EvaluationReport>;
     evaluate(input: RagEvaluationInput, textForFaithfulness?: string, precomputedExpectedVec?: number[]): Promise<RagEvaluationResult>;
     private calculateCosineSimilarity;
-    private calculatePrecisionAtK;
+    calculatePrecisionAtK(retrieved: string[], expected: string[], k: number): number;
     private calculateRecallAtK;
-    private calculateMRR;
+    calculateMRR(retrieved: string[], expected: string[]): number;
     calculateRougeL(referenceText: string, generatedText: string): number;
     private calculateFaithfulness;
     private getLcsLength;
